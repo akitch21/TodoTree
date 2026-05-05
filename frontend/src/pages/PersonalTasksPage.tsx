@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   Plus, CheckCircle2, Circle, Clock,
-  Calendar, AlignLeft, ChevronDown, AlertCircle, Loader2,
+  Calendar, AlignLeft, ChevronDown, AlertCircle, Loader2, X,
 } from "lucide-react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { formatDate, formatDateTime } from "@/lib/formatDate";
@@ -43,8 +43,8 @@ function groupTasks(tasks: PersonalTask[]): Groups {
   for (const t of tasks) {
     if (t.status === "done") { g.done.push(t); continue; }
     if (!t.due_date)          { g.noDue.push(t); continue; }
-    if (t.due_date < todayStr)    { g.overdue.push(t); continue; }
-    if (t.due_date === todayStr)  { g.today.push(t); continue; }
+    if (t.due_date < todayStr)      { g.overdue.push(t); continue; }
+    if (t.due_date === todayStr)    { g.today.push(t); continue; }
     if (t.due_date <= endOfWeekStr) { g.thisWeek.push(t); continue; }
     g.later.push(t);
   }
@@ -55,17 +55,36 @@ const makeEmpty = (): PersonalTaskFormData => ({
   text: "", description: "", dueDate: "", status: "pending",
 });
 
+// ── Panel title helper ────────────────────────────────────────
+function panelTitle(pane: RightPane) {
+  if (pane.type === "add")    return "タスクを追加";
+  if (pane.type === "edit")   return "タスクを編集";
+  return "タスク詳細";
+}
+
 // ── Main page ─────────────────────────────────────────────────
 export default function PersonalTasksPage() {
   const { tasks, loading, error, addTask, updateTask, deleteTask } = usePersonalTasks();
 
-  const [rightPane, setRightPane] = useState<RightPane>({ type: "add" });
-  const [showDone,  setShowDone]  = useState(false);
+  const [rightPane,   setRightPane]   = useState<RightPane>({ type: "add" });
+  const [panelOpen,   setPanelOpen]   = useState(false);   // mobile bottom sheet
+  const [showDone,    setShowDone]    = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const groups = useMemo(() => groupTasks(tasks), [tasks]);
-
+  const groups     = useMemo(() => groupTasks(tasks), [tasks]);
   const selectedId = rightPane.type !== "add" ? rightPane.task.id : undefined;
+  const activeCount = tasks.filter((t) => t.status !== "done").length;
+
+  // Open panel helpers
+  const openPanel = useCallback((pane: RightPane) => {
+    setRightPane(pane);
+    setPanelOpen(true);
+  }, []);
+
+  const closePanel = useCallback(() => {
+    setRightPane({ type: "add" });
+    setPanelOpen(false);
+  }, []);
 
   // Cycle status: pending → in_progress → done → pending
   const toggleStatus = useCallback(async (id: string) => {
@@ -78,12 +97,12 @@ export default function PersonalTasksPage() {
   }, [tasks, updateTask]);
 
   const handleSelect = useCallback((task: PersonalTask) => {
-    setRightPane({ type: "detail", task });
-  }, []);
+    openPanel({ type: "detail", task });
+  }, [openPanel]);
 
   const handleEdit = useCallback((task: PersonalTask) => {
-    setRightPane({ type: "edit", task });
-  }, []);
+    openPanel({ type: "edit", task });
+  }, [openPanel]);
 
   const handleSubmit = useCallback(async (data: PersonalTaskFormData, id?: string) => {
     setSubmitError(null);
@@ -95,7 +114,7 @@ export default function PersonalTasksPage() {
           status:      data.status,
           due_date:    data.dueDate || null,
         });
-        setRightPane({ type: "add" });
+        closePanel();
       } else {
         await addTask({
           text:        data.text.trim(),
@@ -103,28 +122,28 @@ export default function PersonalTasksPage() {
           status:      "pending",
           due_date:    data.dueDate || null,
         });
+        // On mobile: close panel after add. On desktop: keep form open for rapid entry.
+        if (window.innerWidth < 768) setPanelOpen(false);
       }
     } catch {
       setSubmitError("保存に失敗しました。再度お試しください。");
     }
-  }, [addTask, updateTask]);
+  }, [addTask, updateTask, closePanel]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
       await deleteTask(id);
-      setRightPane({ type: "add" });
+      closePanel();
     } catch {
       setSubmitError("削除に失敗しました。再度お試しください。");
     }
-  }, [deleteTask]);
+  }, [deleteTask, closePanel]);
 
   // Keep detail/edit pane in sync when tasks state changes
   const syncedTask = useMemo(() => {
     if (rightPane.type === "add") return null;
     return tasks.find((t) => t.id === rightPane.task.id) ?? null;
   }, [tasks, rightPane]);
-
-  const activeCount = tasks.filter((t) => t.status !== "done").length;
 
   if (loading) {
     return (
@@ -146,6 +165,7 @@ export default function PersonalTasksPage() {
 
   return (
     <div className="flex h-full flex-col gap-4">
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -155,7 +175,7 @@ export default function PersonalTasksPage() {
           </p>
         </div>
         <button
-          onClick={() => setRightPane({ type: "add" })}
+          onClick={() => openPanel({ type: "add" })}
           className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"
         >
           <Plus size={15} />
@@ -163,7 +183,7 @@ export default function PersonalTasksPage() {
         </button>
       </div>
 
-      {/* エラー表示 */}
+      {/* Error */}
       {submitError && (
         <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           <AlertCircle size={14} />
@@ -171,12 +191,11 @@ export default function PersonalTasksPage() {
         </div>
       )}
 
-      {/* 2-column body */}
+      {/* Body: task list (left) + form panel (right on desktop) */}
       <div className="flex flex-1 min-h-0 gap-4">
 
-        {/* Left — grouped task list */}
+        {/* Task list — full width on mobile, flex-1 on desktop */}
         <div className="flex-1 min-w-0 overflow-y-auto space-y-5 pr-1">
-
           <TaskGroup
             label="期限切れ" accent="text-destructive"
             tasks={groups.overdue}
@@ -231,37 +250,108 @@ export default function PersonalTasksPage() {
           {activeCount === 0 && groups.done.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
               <CheckCircle2 size={32} className="opacity-30" />
-              <p className="text-sm">タスクがありません。右のフォームから追加しましょう。</p>
+              <p className="text-sm text-center">
+                タスクがありません。<br />「＋ タスクを追加」ボタンから追加しましょう。
+              </p>
             </div>
           )}
         </div>
 
-        {/* Right — form / detail */}
-        <div className="w-[340px] shrink-0 overflow-y-auto rounded-xl border bg-card p-5">
-          {rightPane.type === "detail" && syncedTask ? (
-            <PersonalTaskDetail
-              task={syncedTask}
-              onEdit={handleEdit}
-              onClose={() => setRightPane({ type: "add" })}
-              onDelete={handleDelete}
-            />
-          ) : rightPane.type === "edit" && syncedTask ? (
-            <PersonalTaskForm
-              mode="edit"
-              initialData={syncedTask}
-              onSubmit={handleSubmit}
-              onCancel={() => setRightPane({ type: "add" })}
-            />
-          ) : (
-            <PersonalTaskForm
-              mode="add"
-              onSubmit={handleSubmit}
-              onCancel={() => {}}
-            />
-          )}
+        {/* Desktop sidebar panel (hidden on mobile) */}
+        <div className="hidden md:flex md:w-[340px] md:shrink-0 md:flex-col md:overflow-y-auto md:rounded-xl md:border md:bg-card md:p-5">
+          <PanelContent
+            rightPane={rightPane}
+            syncedTask={syncedTask}
+            onEdit={handleEdit}
+            onClose={closePanel}
+            onDelete={handleDelete}
+            onSubmit={handleSubmit}
+          />
+        </div>
+      </div>
+
+      {/* Mobile: bottom sheet overlay */}
+      {panelOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/50 md:hidden"
+          onClick={closePanel}
+        />
+      )}
+
+      {/* Mobile: bottom sheet panel */}
+      <div
+        className={
+          "fixed inset-x-0 bottom-16 z-30 max-h-[78vh] rounded-t-2xl border-t bg-card shadow-2xl " +
+          "transition-transform duration-300 ease-out md:hidden " +
+          (panelOpen ? "translate-y-0" : "translate-y-[110%]")
+        }
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        {/* Sheet header */}
+        <div className="flex items-center justify-between border-b px-5 py-3">
+          <div className="mx-auto mr-0 h-1 w-8 rounded-full bg-muted-foreground/30 absolute left-1/2 -translate-x-1/2 top-2" />
+          <h3 className="text-sm font-semibold">{panelTitle(rightPane)}</h3>
+          <button
+            onClick={closePanel}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Sheet body */}
+        <div className="overflow-y-auto p-5">
+          <PanelContent
+            rightPane={rightPane}
+            syncedTask={syncedTask}
+            onEdit={handleEdit}
+            onClose={closePanel}
+            onDelete={handleDelete}
+            onSubmit={handleSubmit}
+          />
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Shared panel content ──────────────────────────────────────
+function PanelContent({
+  rightPane, syncedTask, onEdit, onClose, onDelete, onSubmit,
+}: {
+  rightPane:  RightPane;
+  syncedTask: PersonalTask | null;
+  onEdit:     (t: PersonalTask) => void;
+  onClose:    () => void;
+  onDelete:   (id: string) => Promise<void>;
+  onSubmit:   (data: PersonalTaskFormData, id?: string) => Promise<void>;
+}) {
+  if (rightPane.type === "detail" && syncedTask) {
+    return (
+      <PersonalTaskDetail
+        task={syncedTask}
+        onEdit={onEdit}
+        onClose={onClose}
+        onDelete={onDelete}
+      />
+    );
+  }
+  if (rightPane.type === "edit" && syncedTask) {
+    return (
+      <PersonalTaskForm
+        mode="edit"
+        initialData={syncedTask}
+        onSubmit={onSubmit}
+        onCancel={onClose}
+      />
+    );
+  }
+  return (
+    <PersonalTaskForm
+      mode="add"
+      onSubmit={onSubmit}
+      onCancel={() => {}}
+    />
   );
 }
 
@@ -380,7 +470,7 @@ function PersonalTaskDetail({
   task:     PersonalTask;
   onEdit:   (t: PersonalTask) => void;
   onClose:  () => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const todayStr  = new Date().toISOString().split("T")[0];
@@ -388,7 +478,6 @@ function PersonalTaskDetail({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Title + status */}
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-base font-semibold leading-snug">{task.text}</h3>
         <StatusBadge status={task.status} />
@@ -400,7 +489,6 @@ function PersonalTaskDetail({
         </p>
       )}
 
-      {/* Meta */}
       <dl className="flex flex-col gap-2.5 rounded-lg border bg-muted/30 p-3">
         <MetaRow icon={<Clock size={13} />} label="発行日時">
           <span className="text-xs text-muted-foreground">{formatDateTime(task.created_at)}</span>
@@ -415,7 +503,6 @@ function PersonalTaskDetail({
         )}
       </dl>
 
-      {/* Primary actions */}
       <div className="flex gap-2">
         <button
           onClick={onClose}
@@ -431,7 +518,6 @@ function PersonalTaskDetail({
         </button>
       </div>
 
-      {/* Delete */}
       {!confirmDelete ? (
         <button
           onClick={() => setConfirmDelete(true)}
@@ -512,24 +598,20 @@ function PersonalTaskForm({
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold">
-          {mode === "add" ? "タスクを追加" : "タスクを編集"}
-        </h3>
-        {mode === "edit" && (
+    <div className="flex flex-col">
+      {mode === "edit" && (
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold">タスクを編集</h3>
           <button
             onClick={onCancel}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             追加モードに戻る
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-3 flex-1">
-
-        {/* タイトル */}
+      <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-3">
         <FormField label="タスクタイトル" required>
           <input
             value={form.text}
@@ -541,7 +623,6 @@ function PersonalTaskForm({
           />
         </FormField>
 
-        {/* 詳細 */}
         <FormField label="タスク詳細" icon={<AlignLeft size={13} />}>
           <textarea
             value={form.description}
@@ -552,7 +633,6 @@ function PersonalTaskForm({
           />
         </FormField>
 
-        {/* 期限 */}
         <FormField label="期限" icon={<Calendar size={13} />}>
           <input
             type="date"
@@ -562,7 +642,6 @@ function PersonalTaskForm({
           />
         </FormField>
 
-        {/* ステータス（編集時のみ） */}
         {mode === "edit" && (
           <FormField label="ステータス">
             <select
@@ -577,8 +656,7 @@ function PersonalTaskForm({
           </FormField>
         )}
 
-        {/* Submit */}
-        <div className="flex gap-2 pt-2 mt-auto">
+        <div className="flex gap-2 pt-2">
           {mode === "edit" && (
             <button
               type="button"
