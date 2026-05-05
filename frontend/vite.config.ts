@@ -11,4 +11,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    port: 5173,
+    strictPort: true, // 5173が使用中の場合はエラーにする（自動変更させない）
+  },
 })

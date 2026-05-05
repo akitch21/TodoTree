@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24  # 1 day
     frontend_origin: str = "http://localhost:5173"
+    extra_origins: str = ""  # カンマ区切りで追加オリジンを指定可能
     sql_echo: bool = False
     create_tables_on_startup: bool = False
 

@@ -123,11 +123,19 @@ export function TreeView({ tasks, onToggle, projectName, onSelectTask }: TreeVie
     <div style={{ position: "absolute", inset: 0 }} data-testid="tree-view">
       <ReactFlow nodes={nodes} edges={edges}
         onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.25 }}
+        nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.3 }}
         proOptions={{ hideAttribution: true }}
+        minZoom={0.2}
+        maxZoom={1.5}
+        panOnDrag
+        zoomOnPinch
+        zoomOnScroll={false}
       >
         <Background gap={20} size={1} color="var(--border)" />
-        <Controls showInteractive={false} />
+        <Controls
+          showInteractive={false}
+          style={{ bottom: 8, left: 8 }}
+        />
       </ReactFlow>
     </div>
   );

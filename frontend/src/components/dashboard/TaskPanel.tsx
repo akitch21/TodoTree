@@ -37,7 +37,7 @@ export function TaskPanel({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden rounded-xl border bg-card"
-      style={{ minHeight: 420 }}>
+      style={{ minHeight: "min(420px, calc(100vh - 280px))" }}>
 
       <div className="flex shrink-0 items-center justify-between px-4 py-3">
         <span className="text-sm font-semibold">{title}</span>
@@ -51,13 +51,15 @@ export function TaskPanel({
             {VIEW_BUTTONS.map(({ mode, label, icon }) => (
               <button key={mode} onClick={() => onViewModeChange(mode)}
                 data-testid={"task-view-" + mode}
+                aria-label={label}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  "flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors md:px-3",
                   viewMode === mode
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}>
-                {icon}{label}
+                {icon}
+                <span className="hidden md:inline">{label}</span>
               </button>
             ))}
           </div>
@@ -75,12 +77,15 @@ export function TaskPanel({
           />
         )}
         {viewMode === "tree" && (
-          <TreeView
-            tasks={tasks}
-            projectName={projectName ?? ""}
-            onToggle={onToggle}
-            onSelectTask={onSelectTask}
-          />
+          /* モバイルではボトムナビ(64px)分だけ下を空けて操作ボタンが隠れないようにする */
+          <div className="absolute inset-0 pb-16 md:pb-0">
+            <TreeView
+              tasks={tasks}
+              projectName={projectName ?? ""}
+              onToggle={onToggle}
+              onSelectTask={onSelectTask}
+            />
+          </div>
         )}
         {viewMode === "kanban" && (
           <KanbanView

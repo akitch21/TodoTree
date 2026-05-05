@@ -68,10 +68,12 @@ export default function TeamSpacePage() {
         <Card>
           <ul className="divide-y">
             {MOCK_SHARED.map((t) => (
-              <li key={t.id} className="flex items-center gap-3 px-4 py-3 hover:bg-accent/50">
-                <span className="flex-1 text-sm">{t.text}</span>
-                <span className="text-xs text-muted-foreground">{t.assignee}</span>
-                <StatusBadge status={t.status} />
+              <li key={t.id} className="flex flex-col gap-1 px-4 py-3 hover:bg-accent/50 sm:flex-row sm:items-center sm:gap-3">
+                <span className="flex-1 text-sm font-medium">{t.text}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{t.assignee}</span>
+                  <StatusBadge status={t.status} />
+                </div>
               </li>
             ))}
           </ul>

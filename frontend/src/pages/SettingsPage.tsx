@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { useAuth } from "@/store/AuthContext";
+import { useTheme, THEME_OPTIONS, type Theme } from "@/store/ThemeContext";
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [deleteEmail, setDeleteEmail] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -37,6 +40,55 @@ export default function SettingsPage() {
           アカウントとアプリの設定を管理します
         </p>
       </div>
+
+      {/* Theme */}
+      <Card>
+        <CardHeader>
+          <CardTitle>テーマ</CardTitle>
+          <CardDescription>アプリの配色テーマを選択します</CardDescription>
+        </CardHeader>
+        <Separator />
+        <CardContent className="pt-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {THEME_OPTIONS.map((option) => {
+              const isSelected = theme === option.id;
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => setTheme(option.id as Theme)}
+                  className={`relative flex flex-col gap-3 rounded-xl border-2 p-4 text-left transition-all hover:shadow-md ${
+                    isSelected
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  {/* Color swatches */}
+                  <div className="flex gap-1.5">
+                    {option.swatches.map((color, i) => (
+                      <span
+                        key={i}
+                        className="h-6 w-6 rounded-full border border-black/10"
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                  {/* Label + description */}
+                  <div>
+                    <p className="text-sm font-semibold">{option.label}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground leading-snug">{option.desc}</p>
+                  </div>
+                  {/* Selected checkmark */}
+                  {isSelected && (
+                    <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Check size={12} strokeWidth={3} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Profile */}
       <Card>

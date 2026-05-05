@@ -115,7 +115,7 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">プロジェクト</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -247,10 +247,10 @@ export default function ProjectsPage() {
                     </CardContent>
                   </Card>
                 </Link>
-                {/* 完了ボタン（hover時に表示） */}
+                {/* 完了ボタン（モバイルは常時表示、デスクトップはhover時） */}
                 <button
                   onClick={(e) => { e.preventDefault(); handleComplete(p.id); }}
-                  className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-primary hover:border-primary/40 transition-all"
+                  className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100 hover:text-primary hover:border-primary/40 transition-all"
                 >
                   <CheckCircle2 size={11} />
                   完了にする
@@ -318,10 +318,10 @@ export default function ProjectsPage() {
                         </CardContent>
                       </Card>
                     </Link>
-                    {/* 再開するボタン（hover時に表示） */}
+                    {/* 再開するボタン（モバイルは常時表示、デスクトップはhover時） */}
                     <button
                       onClick={(e) => { e.preventDefault(); handleReopen(p.id); }}
-                      className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-primary hover:border-primary/40 transition-all"
+                      className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100 hover:text-primary hover:border-primary/40 transition-all"
                     >
                       <RotateCcw size={11} />
                       再開する

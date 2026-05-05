@@ -25,14 +25,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+# NOTE: Starlette applies add_middleware() in reverse insertion order (last added = outermost).
+# @app.middleware("http") also calls add_middleware() internally.
+# To ensure CORSMiddleware is outermost (handles OPTIONS preflight first),
+# it must be added AFTER any @app.middleware("http") decorators.
 
 @app.middleware("http")
 async def add_no_store_headers(request: Request, call_next):
@@ -41,6 +37,26 @@ async def add_no_store_headers(request: Request, call_next):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Pragma"] = "no-cache"
     return response
+
+
+# 開発環境では localhost の複数ポートを許可（Vite が 5173/5174 を自動選択するため）
+_dev_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+]
+_allowed_origins = list({settings.frontend_origin} | set(_dev_origins)) \
+    if settings.app_env != "production" else [settings.frontend_origin]
+if settings.extra_origins:
+    _allowed_origins += [o.strip() for o in settings.extra_origins.split(",") if o.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth.router,                    prefix="/api/auth",           tags=["auth"])
 app.include_router(projects.router,                prefix="/api/projects",        tags=["projects"])

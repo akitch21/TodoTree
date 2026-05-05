@@ -232,28 +232,33 @@ export default function DashboardPage() {
                 <div
                   key={t.id}
                   className={
-                    "flex items-center gap-3 rounded-lg border px-3 py-2.5 " +
+                    "flex flex-col gap-1.5 rounded-lg border px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 " +
                     (isOverdue
                       ? "border-destructive/30 bg-destructive/5"
                       : "border-amber-400/30 bg-amber-400/5")
                   }
                 >
-                  {isOverdue
-                    ? <AlertTriangle size={14} className="shrink-0 text-destructive" />
-                    : <Clock size={14} className="shrink-0 text-amber-500" />}
-                  <span className="flex-1 min-w-0 truncate text-sm font-medium">
-                    {t.text}
-                  </span>
-                  <ProjectBadge name={t.projectName} id={t.projectId} />
-                  <span
-                    className={
-                      "shrink-0 text-xs font-medium " +
-                      (isOverdue ? "text-destructive" : "text-amber-600")
-                    }
-                  >
-                    {isOverdue ? "期限切れ" : "今日"}
-                    {" · " + formatDate(t.dueDate)}
-                  </span>
+                  {/* アイコン + タスク名 */}
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    {isOverdue
+                      ? <AlertTriangle size={14} className="shrink-0 text-destructive" />
+                      : <Clock size={14} className="shrink-0 text-amber-500" />}
+                    <span className="min-w-0 truncate text-sm font-medium">
+                      {t.text}
+                    </span>
+                  </div>
+                  {/* バッジ + 日付（モバイルは下段、デスクトップは右） */}
+                  <div className="flex items-center gap-2 pl-5 sm:pl-0">
+                    <ProjectBadge name={t.projectName} id={t.projectId} />
+                    <span
+                      className={
+                        "shrink-0 text-xs font-medium " +
+                        (isOverdue ? "text-destructive" : "text-amber-600")
+                      }
+                    >
+                      {isOverdue ? "期限切れ" : "今日"} · {formatDate(t.dueDate)}
+                    </span>
+                  </div>
                 </div>
               );
             })}

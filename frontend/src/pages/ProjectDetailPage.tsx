@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/store/AuthContext";
-import { AlertCircle, ArrowLeft, Check, FolderOpen, Loader2, Pencil, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, FolderOpen, Loader2, Pencil, Plus, X } from "lucide-react";
 import { TaskPanel, type ViewMode } from "@/components/dashboard/TaskPanel";
 import TaskCrudTable from "@/components/project/TaskCrudTable";
 import TaskFormPanel from "@/components/project/TaskFormPanel";
@@ -149,8 +149,9 @@ export default function ProjectDetailPage() {
       })
       .finally(() => setPageLoading(false));
   }, [id]);
-  const [rightPane,  setRightPane]  = useState<RightPane>(DEFAULT_RIGHT);
-  const [treePanel,  setTreePanel]  = useState<TreePanel>(TREE_PANEL_CLOSED);
+  const [rightPane,        setRightPane]        = useState<RightPane>(DEFAULT_RIGHT);
+  const [mobilePanelOpen,  setMobilePanelOpen]  = useState(false);
+  const [treePanel,        setTreePanel]        = useState<TreePanel>(TREE_PANEL_CLOSED);
 
   const reporters = useMemo<Reporter[]>(() => [
     CURRENT_USER,
@@ -184,14 +185,20 @@ export default function ProjectDetailPage() {
   }, []);
 
   // ── Tasks tab: right-pane handlers ───────────────────────
-  const openDetail = useCallback((task: Task) =>
-    setRightPane({ type: "detail", task }), []);
+  const openDetail = useCallback((task: Task) => {
+    setRightPane({ type: "detail", task });
+    setMobilePanelOpen(true);
+  }, []);
 
-  const openEdit = useCallback((task: Task) =>
-    setRightPane({ type: "edit", task }), []);
+  const openEdit = useCallback((task: Task) => {
+    setRightPane({ type: "edit", task });
+    setMobilePanelOpen(true);
+  }, []);
 
-  const openAdd = useCallback((parentId: string | null) =>
-    setRightPane({ type: "add", parentId }), []);
+  const openAdd = useCallback((parentId: string | null) => {
+    setRightPane({ type: "add", parentId });
+    setMobilePanelOpen(true);
+  }, []);
 
   const handleFormSubmit = useCallback(async (data: TaskFormData, editId?: string) => {
     setMutationError(null);
@@ -345,7 +352,7 @@ export default function ProjectDetailPage() {
 
         {/* ── ツリー ─────────────────────────────────────── */}
         {activeTab === "tree" && (
-          <div className="h-full p-6 pb-0 flex flex-col">
+          <div className="h-full p-2 pb-0 md:p-6 md:pb-0 flex flex-col">
             <TaskPanel
               tasks={tasks} viewMode={viewMode}
               onViewModeChange={setViewMode} onToggle={toggleTask}
@@ -359,8 +366,8 @@ export default function ProjectDetailPage() {
 
         {/* ── タスク一覧 — 2カラム ─────────────────────── */}
         {activeTab === "tasks" && (
-          <div className="flex h-full flex-col md:flex-row">
-            {/* Left: table */}
+          <div className="relative flex h-full flex-col md:flex-row">
+            {/* Left: table (full width on mobile) */}
             <div className="flex-1 min-w-0 overflow-y-auto p-4 md:p-6">
               <TaskCrudTable
                 tasks={tasks} onChange={handleTasksChange}
@@ -370,11 +377,8 @@ export default function ProjectDetailPage() {
               />
             </div>
 
-            {/* Divider */}
-            <div className="hidden md:block w-px bg-border shrink-0" />
-
-            {/* Right: detail/form — bottom sheet on mobile, sidebar on desktop */}
-            <div className="border-t md:border-t-0 md:border-l md:w-[340px] md:shrink-0 overflow-y-auto p-4 md:p-6 max-h-[55vh] md:max-h-none">
+            {/* Desktop sidebar */}
+            <div className="hidden md:flex md:w-[340px] md:shrink-0 md:flex-col md:overflow-y-auto md:border-l md:p-6">
               {rightPane.type === "detail" ? (
                 <TaskDetailView
                   task={rightPane.task}
@@ -394,6 +398,64 @@ export default function ProjectDetailPage() {
                 />
               )}
             </div>
+
+            {/* Mobile: bottom sheet overlay */}
+            {mobilePanelOpen && (
+              <div
+                className="fixed inset-0 z-20 bg-black/50 md:hidden"
+                onClick={() => setMobilePanelOpen(false)}
+              />
+            )}
+            <div className={`fixed inset-x-0 bottom-16 z-30 flex max-h-[80vh] flex-col rounded-t-2xl border-t bg-card shadow-2xl transition-transform duration-300 md:hidden ${mobilePanelOpen ? "translate-y-0" : "translate-y-[110%]"}`}>
+              {/* Sheet header */}
+              <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+                <div className="mx-auto h-1 w-10 rounded-full bg-border absolute left-1/2 -translate-x-1/2 top-2" />
+                <h3 className="text-sm font-semibold">
+                  {rightPane.type === "detail" ? "タスク詳細" :
+                   rightPane.type === "edit"   ? "タスクを編集" : "タスクを追加"}
+                </h3>
+                <button
+                  onClick={() => setMobilePanelOpen(false)}
+                  className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                {rightPane.type === "detail" ? (
+                  <TaskDetailView
+                    task={rightPane.task}
+                    allTasks={tasks}
+                    onEdit={(task) => openEdit(task)}
+                    onClose={() => setMobilePanelOpen(false)}
+                    closeLabel="閉じる"
+                  />
+                ) : (
+                  <TaskFormPanel
+                    mode={rightPane.type === "edit" ? "edit" : "create"}
+                    initialData={rightFormData}
+                    allTasks={tasks}
+                    reporters={reporters}
+                    onSubmit={async (data, editId) => {
+                      await handleFormSubmit(data, editId);
+                      setMobilePanelOpen(false);
+                    }}
+                    onCancelEdit={() => setMobilePanelOpen(false)}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Mobile FAB: タスク追加 */}
+            {!mobilePanelOpen && (
+              <button
+                onClick={() => openAdd(null)}
+                className="fixed bottom-20 right-4 z-20 flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-lg md:hidden"
+              >
+                <Plus size={16} />
+                追加
+              </button>
+            )}
           </div>
         )}
 
@@ -440,7 +502,7 @@ export default function ProjectDetailPage() {
             onClick={closeTreePanel} />
         )}
         <div className={
-          "fixed inset-y-0 right-0 z-50 flex w-[400px] max-w-full flex-col border-l bg-card shadow-2xl transition-transform duration-300 " +
+          "fixed inset-y-0 right-0 z-50 flex w-full sm:w-[400px] flex-col border-l bg-card shadow-2xl transition-transform duration-300 pb-16 sm:pb-0 " +
           (treePanel.open ? "translate-x-0" : "translate-x-full")
         }>
           <div className="flex h-14 shrink-0 items-center justify-between border-b px-5">
