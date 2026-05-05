@@ -162,10 +162,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-8">
+    <div className="flex flex-col gap-4 pb-8 md:gap-6">
 
       {/* ── Header ── */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm text-muted-foreground">{todayLabel}</p>
           <h1 className="text-2xl font-bold tracking-tight">
@@ -173,7 +173,7 @@ export default function DashboardPage() {
           </h1>
         </div>
         {overdueCount > 0 && (
-          <div className="flex items-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-xs font-medium text-destructive">
+          <div className="flex w-fit items-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-xs font-medium text-destructive">
             <AlertTriangle size={13} />
             期限切れタスクが {overdueCount} 件あります
           </div>
@@ -188,7 +188,7 @@ export default function DashboardPage() {
       )}
 
       {/* ── Stats ── */}
-      <div className="grid shrink-0 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid shrink-0 grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         <StatCard
           label="アクティブタスク"
           value={totalActive}
