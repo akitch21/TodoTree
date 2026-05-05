@@ -17,6 +17,10 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserDeleteRequest(BaseModel):
+    email: EmailStr
+
+
 # ── Response schemas ───────────────────────────────────────────────────────────
 
 class UserResponse(BaseModel):

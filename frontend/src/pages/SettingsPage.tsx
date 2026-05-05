@@ -1,8 +1,34 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
+import { useAuth } from "@/store/AuthContext";
 
 export default function SettingsPage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [deleteEmail, setDeleteEmail] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      await api.delete("/api/auth/me", { data: { email: deleteEmail.trim() } });
+      logout();
+      navigate("/login", { replace: true });
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail;
+      setDeleteError(detail ?? "退会処理に失敗しました");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -24,7 +50,8 @@ export default function SettingsPage() {
             <label className="text-sm font-medium">お名前</label>
             <input
               type="text"
-              defaultValue="山田 太郎"
+              value={user?.name ?? ""}
+              readOnly
               className="w-full max-w-sm rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
@@ -32,11 +59,11 @@ export default function SettingsPage() {
             <label className="text-sm font-medium">メールアドレス</label>
             <input
               type="email"
-              defaultValue="yamada@example.com"
+              value={user?.email ?? ""}
+              readOnly
               className="w-full max-w-sm rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          <Button size="sm">変更を保存</Button>
         </CardContent>
       </Card>
 
@@ -70,8 +97,36 @@ export default function SettingsPage() {
           <CardDescription>この操作は取り消せません</CardDescription>
         </CardHeader>
         <Separator />
-        <CardContent className="pt-5">
-          <Button variant="destructive" size="sm">アカウントを削除</Button>
+        <CardContent className="pt-5 space-y-4">
+          <div className="space-y-2">
+            <p className="max-w-xl text-sm text-muted-foreground">
+              退会すると、メールアドレス、個人タスク、プロジェクト所属、あなた宛またはあなたが送信した招待が削除されます。
+              あなたが唯一のオーナーで他メンバーがいないプロジェクトは削除されます。
+            </p>
+            <label className="block text-sm font-medium">
+              確認のためメールアドレスを入力
+            </label>
+            <input
+              type="email"
+              value={deleteEmail}
+              onChange={(e) => setDeleteEmail(e.target.value)}
+              placeholder={user?.email ?? "you@example.com"}
+              className="w-full max-w-sm rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          {deleteError && (
+            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {deleteError}
+            </p>
+          )}
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={deleting || deleteEmail.trim().toLowerCase() !== user?.email?.toLowerCase()}
+            onClick={() => void handleDeleteAccount()}
+          >
+            {deleting ? "退会処理中..." : "退会する"}
+          </Button>
         </CardContent>
       </Card>
     </div>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -39,6 +39,16 @@ function loadUser(): AuthUser | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken]   = useState<string | null>(loadToken);
   const [user,  setUser]    = useState<AuthUser | null>(loadUser);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== "todotree-token" && event.key !== "todotree-user") return;
+      setToken(loadToken());
+      setUser(loadUser());
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   function persist(newToken: string, newUser: AuthUser) {
     localStorage.setItem("todotree-token", newToken);

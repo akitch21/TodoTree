@@ -15,6 +15,11 @@ interface InvitationPreview {
   project_name: string;
 }
 
+interface InvitationAcceptResponse {
+  project_id: string;
+  project_name?: string;
+}
+
 type PageState =
   | { kind: "loading" }
   | { kind: "not_found" }
@@ -65,11 +70,9 @@ export default function InvitationAcceptPage() {
     if (!token) return;
     setState({ kind: "accepting" });
     try {
-      await api.post(`/api/invitations/${token}/accept`);
-      // Fetch the project ID to redirect there
-      const { data: inv } = await api.get<InvitationPreview>(`/api/invitations/${token}`);
-      // The project list will now include the new project — navigate to /projects
-      setState({ kind: "success", projectId: "", projectName: inv.project_name });
+      const { data: accepted } = await api.post<InvitationAcceptResponse>(`/api/invitations/${token}/accept`);
+      const projectName = state.kind === "preview" ? state.preview.project_name : accepted.project_name ?? "";
+      setState({ kind: "success", projectId: accepted.project_id, projectName });
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })
         ?.response?.data?.detail;
@@ -257,10 +260,10 @@ export default function InvitationAcceptPage() {
               </div>
               <div className="flex flex-col gap-2 w-full">
                 <button
-                  onClick={() => navigate("/projects")}
+                  onClick={() => navigate(state.projectId ? `/projects/${state.projectId}` : "/projects")}
                   className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
                 >
-                  プロジェクト一覧へ
+                  プロジェクトを開く
                 </button>
               </div>
             </div>

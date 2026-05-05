@@ -6,3 +6,4 @@ async def test_health_returns_ok(client: AsyncClient) -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+    assert response.headers["cache-control"] == "no-store"

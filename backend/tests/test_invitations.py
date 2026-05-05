@@ -192,6 +192,42 @@ async def test_accept_invitation_creates_project_member(
         assert member.role == "member"
 
 
+async def test_invited_user_can_list_and_accept_own_pending_invitation(
+    client: AsyncClient,
+) -> None:
+    """The invited user gets an in-app pending invitation and can accept it."""
+    owner = await _register(client, "owner_my_inv@example.com")
+    invitee = await _register(client, "invitee_my_inv@example.com")
+    project_id = await _create_project(client, owner["token"], "Visible Invite Project")
+
+    invite_resp = await _invite(client, owner["token"], project_id, "invitee_my_inv@example.com")
+    assert invite_resp.status_code == 201
+
+    list_resp = await client.get(
+        "/api/invitations/me",
+        headers=_auth(invitee["token"]),
+    )
+    assert list_resp.status_code == 200
+    invitations = list_resp.json()
+    assert len(invitations) == 1
+    assert invitations[0]["project_id"] == project_id
+    assert invitations[0]["project_name"] == "Visible Invite Project"
+    assert invitations[0]["status"] == "pending"
+
+    accept_resp = await client.post(
+        f"/api/invitations/{invitations[0]['token']}/accept",
+        headers=_auth(invitee["token"]),
+    )
+    assert accept_resp.status_code == 200
+
+    projects_resp = await client.get(
+        "/api/projects/",
+        headers=_auth(invitee["token"]),
+    )
+    assert projects_resp.status_code == 200
+    assert [project["id"] for project in projects_resp.json()] == [project_id]
+
+
 async def test_wrong_email_cannot_accept_invitation(client: AsyncClient) -> None:
     """A user whose email does not match the invitation email gets 403."""
     owner = await _register(client, "owner_mismatch@example.com")
@@ -289,6 +325,22 @@ async def test_revoke_invitation(client: AsyncClient) -> None:
     found = next((i for i in list_resp.json() if i["id"] == inv_id), None)
     assert found is not None
     assert found["status"] == "revoked"
+
+
+async def test_invited_non_member_cannot_revoke_invitation(client: AsyncClient) -> None:
+    """Invitation revoke is limited to project owner/admin members, not invitees."""
+    owner = await _register(client, "owner_revoke_guard@example.com")
+    invitee = await _register(client, "invitee_revoke_guard@example.com")
+    project_id = await _create_project(client, owner["token"])
+
+    invite_resp = await _invite(client, owner["token"], project_id, "invitee_revoke_guard@example.com")
+    inv_id = invite_resp.json()["id"]
+
+    del_resp = await client.delete(
+        f"/api/projects/{project_id}/invitations/{inv_id}",
+        headers=_auth(invitee["token"]),
+    )
+    assert del_resp.status_code == 403
 
 
 async def test_admin_can_invite(client: AsyncClient) -> None:

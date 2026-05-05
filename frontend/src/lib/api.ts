@@ -4,7 +4,11 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 export const api = axios.create({
   baseURL: BASE_URL,
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store",
+    Pragma: "no-cache",
+  },
 });
 
 // Bearer トークンを自動付与

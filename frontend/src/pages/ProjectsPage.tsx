@@ -1,16 +1,80 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { FolderOpen, Plus, X, Search, CheckCircle2, ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  FolderOpen,
+  Loader2,
+  Plus,
+  RotateCcw,
+  Search,
+  X,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { useProjects, projectStats } from "@/hooks/useProjects";
+import { api } from "@/lib/api";
+
+interface MyInvitation {
+  id: string;
+  project_id: string;
+  project_name: string;
+  email: string;
+  role: "owner" | "admin" | "member";
+  token: string;
+  expires_at: string;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  owner: "オーナー",
+  admin: "管理者",
+  member: "メンバー",
+};
 
 // ── Page ──────────────────────────────────────────────────────
 export default function ProjectsPage() {
-  const { projects, loading, error, addProject, updateProject } = useProjects();
+  const { projects, loading, error, addProject, updateProject, refetch } = useProjects();
   const [showModal,       setShowModal]       = useState(false);
   const [searchQuery,     setSearchQuery]     = useState("");
   const [showCompleted,   setShowCompleted]   = useState(false);
+  const [invitations, setInvitations] = useState<MyInvitation[]>([]);
+  const [invitationLoading, setInvitationLoading] = useState(true);
+  const [invitationError, setInvitationError] = useState<string | null>(null);
+  const [acceptingInvitationId, setAcceptingInvitationId] = useState<string | null>(null);
+
+  const fetchInvitations = async () => {
+    setInvitationError(null);
+    try {
+      const { data } = await api.get<MyInvitation[]>("/api/invitations/me");
+      setInvitations(data);
+    } catch {
+      setInvitationError("招待の取得に失敗しました");
+    } finally {
+      setInvitationLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchInvitations();
+  }, []);
+
+  const acceptInvitation = async (invitation: MyInvitation) => {
+    setAcceptingInvitationId(invitation.id);
+    setInvitationError(null);
+    try {
+      await api.post(`/api/invitations/${invitation.token}/accept`);
+      setInvitations((prev) => prev.filter((item) => item.id !== invitation.id));
+      await refetch();
+    } catch {
+      setInvitationError("招待の承認に失敗しました。招待の状態を確認してください。");
+    } finally {
+      setAcceptingInvitationId(null);
+    }
+  };
 
   // 検索フィルター適用後に完了 / 未完了で分離
   const allFiltered = searchQuery.trim()
@@ -83,6 +147,56 @@ export default function ProjectsPage() {
           className="w-full rounded-lg border bg-background py-2 pl-9 pr-3 text-sm outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
+
+      {/* Pending invitations addressed to the current user */}
+      {(invitationLoading || invitationError || invitations.length > 0) && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            招待中のプロジェクト
+          </h2>
+          <Card>
+            {invitationLoading ? (
+              <div className="flex items-center justify-center gap-2 px-4 py-5 text-sm text-muted-foreground">
+                <Loader2 size={14} className="animate-spin" />
+                招待を確認中...
+              </div>
+            ) : invitationError ? (
+              <div className="flex items-center gap-2 px-4 py-4 text-sm text-destructive">
+                <AlertCircle size={14} />
+                {invitationError}
+              </div>
+            ) : (
+              <ul className="divide-y">
+                {invitations.map((invitation) => (
+                  <li key={invitation.id} className="flex items-center gap-3 px-4 py-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Clock size={15} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{invitation.project_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {ROLE_LABELS[invitation.role]} として招待されています
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => void acceptInvitation(invitation)}
+                      disabled={acceptingInvitationId === invitation.id}
+                      className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-40"
+                    >
+                      {acceptingInvitationId === invitation.id ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Check size={12} />
+                      )}
+                      承認
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </section>
+      )}
 
       {/* Active projects grid */}
       {filtered.length === 0 ? (

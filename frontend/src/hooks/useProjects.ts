@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import { flattenTasks } from "@/lib/taskTree";
+import { useAuth } from "@/store/AuthContext";
 import type { Task, TaskStatus } from "@/types";
 import type { ProjectMember } from "@/components/project/MemberEditor";
 
@@ -105,11 +106,18 @@ export type { TaskStatus };
 // ── Hook ───────────────────────────────────────────────────────────────────────
 
 export function useProjects() {
+  const { token, user } = useAuth();
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState<string | null>(null);
 
   const fetchProjects = useCallback(async () => {
+    if (!token) {
+      setProjects([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -120,16 +128,19 @@ export function useProjects() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
-  useEffect(() => { fetchProjects(); }, [fetchProjects]);
+  useEffect(() => {
+    setProjects([]);
+    void fetchProjects();
+  }, [fetchProjects, user?.id]);
 
   const addProject = useCallback(async (name: string, description: string) => {
-    const { data } = await api.post<ApiProject>("/api/projects/", {
+    await api.post<ApiProject>("/api/projects/", {
       name, description, status: "active",
     });
-    setProjects((prev) => [...prev, toProjectData(data)]);
-  }, []);
+    await fetchProjects();
+  }, [fetchProjects]);
 
   const updateProject = useCallback(async (
     id: string,

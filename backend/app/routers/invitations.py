@@ -24,7 +24,12 @@ from app.permissions import (
     get_project_member,
     require_project_owner_or_admin,
 )
-from app.schemas.project import InvitationCreate, InvitationPreviewResponse, InvitationResponse
+from app.schemas.project import (
+    InvitationCreate,
+    InvitationPreviewResponse,
+    InvitationResponse,
+    MyInvitationResponse,
+)
 
 INVITATION_EXPIRE_DAYS = 7
 TOKEN_BYTES = 32  # secrets.token_hex(32) produces 64 hex chars
@@ -159,6 +164,56 @@ async def revoke_invitation(
 # ── Router B: token-based accept endpoint ─────────────────────────────────────
 
 invitations_router = APIRouter()
+
+
+def _my_invitation_response(invitation: ProjectInvitation) -> MyInvitationResponse:
+    return MyInvitationResponse(
+        id=invitation.id,
+        project_id=invitation.project_id,
+        email=invitation.email,
+        role=invitation.role,
+        token=invitation.token,
+        status=invitation.status,
+        expires_at=invitation.expires_at,
+        invited_by_user_id=invitation.invited_by_user_id,
+        created_at=invitation.created_at,
+        project_name=invitation.project.name,
+    )
+
+
+@invitations_router.get(
+    "/me",
+    response_model=list[MyInvitationResponse],
+)
+async def list_my_pending_invitations(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List pending invitations addressed to the current user's email."""
+    result = await db.execute(
+        select(ProjectInvitation)
+        .where(
+            ProjectInvitation.email == current_user.email,
+            ProjectInvitation.status == "pending",
+        )
+        .options(selectinload(ProjectInvitation.project))
+        .order_by(ProjectInvitation.created_at.desc())
+    )
+    invitations = result.scalars().all()
+
+    now = datetime.now(timezone.utc)
+    active: list[ProjectInvitation] = []
+    for invitation in invitations:
+        expires = invitation.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires <= now:
+            invitation.status = "expired"
+        else:
+            active.append(invitation)
+    await db.commit()
+
+    return [_my_invitation_response(invitation) for invitation in active]
 
 
 

@@ -81,6 +81,10 @@ class InvitationResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MyInvitationResponse(InvitationResponse):
+    project_name: str
+
+
 class ProjectResponse(BaseModel):
     id: uuid.UUID
     name: str
