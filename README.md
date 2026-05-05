@@ -1,175 +1,159 @@
 # ToDoTree
 
 階層構造でタスクを管理できるフルスタックWebアプリです。
-プロジェクト単位でタスクをツリーとして整理し、個人タスクも同時に管理できます。
+フロントエンドは Vercel、バックエンドと PostgreSQL は Railway へのデプロイを想定しています。
 
----
+## Tech Stack
 
-## 🔗 デモ
+- Frontend: React, TypeScript, Vite
+- Backend: FastAPI, async SQLAlchemy
+- Database: PostgreSQL
+- Migration: Alembic
 
-👉 https://your-app.vercel.app
-👉 API: https://your-api.railway.app
-
-**デモアカウント**
-
-* Email: [demo@example.com](mailto:demo@example.com)
-* Password: demo1234
-
----
-
-## 🎥 デモ動画
-
-<!-- GIF or 動画リンク -->
-
-![demo](./docs/demo.gif)
-
----
-
-## ✨ 主な機能
-
-* ユーザー認証（JWT）
-* プロジェクト管理（作成 / 編集 / ステータス変更）
-* 階層タスク（親子構造）
-* タスクCRUD（追加 / 編集 / 削除 / 完了）
-* 個人タスク管理
-* ツリービュー / テーブルビュー
-* APIエラーハンドリング
-
----
-
-## 🛠 技術スタック
-
-### Frontend
-
-* React + TypeScript
-* Vite
-* Tailwind CSS
-* React Flow
-* Axios
+## Local Setup
 
 ### Backend
-
-* FastAPI
-* SQLAlchemy (async)
-* PostgreSQL
-* Alembic
-
-### Infrastructure
-
-* Vercel（Frontend）
-* Railway（Backend / DB）
-
----
-
-## 🏗 アーキテクチャ
-
-```text
-Frontend (Vercel)
-   ↓ REST API
-Backend (FastAPI / Railway)
-   ↓
-PostgreSQL
-```
-
----
-
-## 🚀 セットアップ（ローカル）
-
-### 1. クローン
-
-```bash
-git clone https://github.com/yourname/todotree
-cd todotree
-```
-
-### 2. DB起動
 
 ```bash
 cd backend
 cp .env.example .env
-docker-compose up -d
 ```
 
-### 3. Backend起動
+ローカル開発では `.env` を次のように設定します。
+
+```text
+APP_ENV=development
+DATABASE_URL=postgresql+asyncpg://todotree:todotree@localhost:5433/todotree
+SECRET_KEY=local-development-secret
+FRONTEND_ORIGIN=http://localhost:5173
+SQL_ECHO=false
+CREATE_TABLES_ON_STARTUP=false
+```
+
+PostgreSQL を起動して migration を適用します。
 
 ```bash
-pip install -e ".[dev]"
+docker-compose up -d
+pip install -r requirements.txt
 alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-### 4. Frontend起動
+Health check:
+
+```bash
+curl http://localhost:8000/api/health
+```
+
+### Frontend
 
 ```bash
 cd frontend
 cp .env.example .env
-npm install
-npm run dev
 ```
 
----
-
-## ⚙️ 環境変数
-
-### Frontend
+ローカル開発では `.env` を次のように設定します。
 
 ```text
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-### Backend
-
-```text
-APP_ENV=development
-DATABASE_URL=postgresql+asyncpg://...
-SECRET_KEY=your-secret
-FRONTEND_ORIGIN=http://localhost:5173
+```bash
+npm install
+npm run dev
 ```
 
----
+Production build:
 
-## 📌 設計上のポイント
+```bash
+npm run build
+```
 
-* localStorage依存を排除し、APIベースに統一
-* AlembicによるDBマイグレーション管理
-* React Hookで状態管理を分離
-* APIエラー時のUI崩壊を防止
+Vite の出力ディレクトリは `dist` です。
 
----
+## Railway Backend Deploy
 
-## ⚠️ 制限事項
+Railway の backend service は `backend` ディレクトリを root として設定します。
 
-* メンバー招待機能は未完成
-* 通知 / コメント機能なし
-* ドラッグ&ドロップ未対応
-* 本番監視・ログ基盤未整備
+Start command は `Procfile` の内容を使います。
 
----
+```text
+web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
 
-## 🔮 今後の改善
+Railway backend に設定する環境変数:
 
-* サブスクリプション機能（Stripe）
-* 権限管理（RBAC）
-* タスクコメント・添付ファイル
-* リアルタイム更新
-* UI/UX改善
+```text
+DATABASE_URL=<Railway PostgreSQL DATABASE_URL>
+SECRET_KEY=<strong-random-secret>
+FRONTEND_ORIGIN=https://<your-vercel-app>.vercel.app
+APP_ENV=production
+```
 
----
+Railway の `DATABASE_URL` が `postgresql://` または `postgres://` の場合でも、アプリ側で `postgresql+asyncpg://` に正規化します。
 
-## 🧠 学んだこと
+Migration:
 
-* フロントとバックの責務分離
-* DBマイグレーションの重要性
-* 状態管理の設計
-* API設計とエラーハンドリング
+```bash
+railway run alembic upgrade head
+```
 
----
+本番では起動時の自動テーブル作成は使いません。schema 変更は Alembic migration で管理します。
 
-## 📬 フィードバック
+## Vercel Frontend Deploy
 
-Issues または以下で受け付けています。
+Vercel の frontend project は `frontend` ディレクトリを root として設定します。
 
-* GitHub Issues
-* X: @youraccount
+- Build command: `npm run build`
+- Output directory: `dist`
 
----
+Vercel に設定する環境変数:
+
+```text
+VITE_API_BASE_URL=https://<your-railway-api>.railway.app
+```
+
+## Environment Examples
+
+### backend/.env.example
+
+```text
+DATABASE_URL=
+SECRET_KEY=
+FRONTEND_ORIGIN=
+APP_ENV=production
+```
+
+### frontend/.env.example
+
+```text
+VITE_API_BASE_URL=
+```
+
+## Deployment Checklist
+
+1. Railway PostgreSQL を作成する
+2. Railway backend service を `backend` root で作成する
+3. Railway backend に環境変数を設定する
+4. Railway で `alembic upgrade head` を実行する
+5. Vercel frontend project を `frontend` root で作成する
+6. Vercel に `VITE_API_BASE_URL` を設定する
+7. Vercel にデプロイする
+8. Railway backend の `FRONTEND_ORIGIN` を Vercel の本番URLに合わせる
+
+## Basic Flow
+
+デプロイ後に以下を確認します。
+
+- `GET /api/health` が `{ "status": "ok" }` を返す
+- ユーザー登録
+- ログイン
+- プロジェクト作成
+- メールアドレスでユーザー招待
+- 招待されたユーザーが `/projects` で承認
+
+## Notes
+
+- `SECRET_KEY` は production で必須です。弱い値や未設定では起動しません。
+- `FRONTEND_ORIGIN` は production で Vercel のURLを設定してください。
+- API レスポンスには `Cache-Control: no-store` を付け、認証付きデータがキャッシュされにくいようにしています。
