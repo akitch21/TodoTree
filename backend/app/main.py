@@ -7,6 +7,7 @@ from app.config import settings
 from app.database import Base, engine
 import app.models  # noqa: F401 - Alembic / optional dev table creation metadata
 from app.routers import auth, personal_tasks, projects, tasks
+from app.routers.invitations import invitations_router, project_invitations_router
 
 
 @asynccontextmanager
@@ -32,10 +33,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router,           prefix="/api/auth",           tags=["auth"])
-app.include_router(projects.router,      prefix="/api/projects",        tags=["projects"])
-app.include_router(tasks.router,         prefix="/api/tasks",           tags=["tasks"])
-app.include_router(personal_tasks.router, prefix="/api/personal-tasks", tags=["personal-tasks"])
+app.include_router(auth.router,                    prefix="/api/auth",           tags=["auth"])
+app.include_router(projects.router,                prefix="/api/projects",        tags=["projects"])
+app.include_router(project_invitations_router,     prefix="/api/projects",        tags=["invitations"])
+app.include_router(invitations_router,             prefix="/api/invitations",     tags=["invitations"])
+app.include_router(tasks.router,                   prefix="/api/tasks",           tags=["tasks"])
+app.include_router(personal_tasks.router,          prefix="/api/personal-tasks",  tags=["personal-tasks"])
 
 
 @app.get("/api/health")

@@ -5,9 +5,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.auth import get_current_user
 from app.database import get_db
 from app.models.project import Project, ProjectMember
 from app.models.task import Task
+from app.models.user import User
 from app.schemas.project import (
     ProjectCreate,
     ProjectMemberAdd,
@@ -35,10 +37,24 @@ async def list_projects(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
-async def create_project(body: ProjectCreate, db: AsyncSession = Depends(get_db)):
+async def create_project(
+    body: ProjectCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     project = Project(**body.model_dump())
     db.add(project)
+    await db.flush()  # project.id が確定する
+
+    # プロジェクト作成者を owner として自動登録
+    owner_member = ProjectMember(
+        project_id=project.id,
+        user_id=current_user.id,
+        role="owner",
+    )
+    db.add(owner_member)
     await db.commit()
+
     result = await db.execute(
         select(Project).where(Project.id == project.id).options(*_load_opts())
     )
