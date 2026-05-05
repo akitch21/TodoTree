@@ -120,12 +120,20 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* タップ時のハイライトをなくす */
+    -webkit-tap-highlight-color: transparent;
     }
   body {
     @apply bg-background text-foreground;
+    /* iOS のバウンススクロールを有効化 */
+    -webkit-overflow-scrolling: touch;
     }
   html {
     @apply font-sans;
+    }
+  button, a, [role="button"] {
+    /* ダブルタップズームを防ぐ */
+    touch-action: manipulation;
     }
 }
 @layer components {
@@ -134,5 +142,13 @@
            placeholder:text-muted-foreground
            focus:ring-1 focus:ring-primary
            transition-shadow;
+  }
+  /* スクロールバーを非表示（BottomNavタブ等に使用） */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }
