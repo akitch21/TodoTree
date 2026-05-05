@@ -1,11 +1,12 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useAuth } from "@/store/AuthContext";
 import { AlertCircle, ArrowLeft, Check, FolderOpen, Loader2, Pencil, X } from "lucide-react";
 import { TaskPanel, type ViewMode } from "@/components/dashboard/TaskPanel";
 import TaskCrudTable from "@/components/project/TaskCrudTable";
 import TaskFormPanel from "@/components/project/TaskFormPanel";
 import TaskDetailView from "@/components/project/TaskDetailView";
-import MemberEditor, { type ProjectMember } from "@/components/project/MemberEditor";
+import MemberEditor from "@/components/project/MemberEditor";
 import TaskSidePanel from "@/components/project/TaskSidePanel";
 import { applyFormToTree, updateTaskInTree, flattenTasks, addTaskToTree } from "@/lib/taskTree";
 import { CURRENT_USER } from "@/lib/currentUser";
@@ -80,6 +81,7 @@ const TABS: { id: Tab; label: string }[] = [
 // ── Page ─────────────────────────────────────────────────────
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { user: authUser } = useAuth();
 
   // API からプロジェクト情報を取得
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
@@ -91,7 +93,7 @@ export default function ProjectDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>("tree");
   const [tasks,     setTasks]     = useState<Task[]>([]);
   const [viewMode,  setViewMode]  = useState<ViewMode>("tree");
-  const [members,   setMembers]   = useState<ProjectMember[]>([]);
+  const [members,   setMembers]   = useState<{ user: { id: string; name: string }; role: string }[]>([]);
 
   // tasks の最新値を ref で保持（削除検出に使用）
   const tasksRef = useRef<Task[]>([]);
@@ -137,9 +139,9 @@ export default function ProjectDetailPage() {
           status:      apiStatusToFrontend(data.status),
         });
         setTasks((data.tasks ?? []).map(apiTaskToFrontend));
-        setMembers((data.members ?? []).map((m: { user_id: string; role: string }) => ({
-          user: { id: m.user_id, name: "", email: "" },
-          role: m.role as "owner" | "member",
+        setMembers((data.members ?? []).map((m: { user_id: string; user?: { name?: string }; role: string }) => ({
+          user: { id: m.user_id, name: m.user?.name ?? "" },
+          role: m.role,
         })));
       })
       .catch(() => {
@@ -422,10 +424,10 @@ export default function ProjectDetailPage() {
         )}
 
         {/* ── メンバー ───────────────────────────────────── */}
-        {activeTab === "members" && (
+        {activeTab === "members" && id && (
           <div className="h-full overflow-y-auto p-6">
             <div className="max-w-2xl">
-              <MemberEditor members={members} onChange={setMembers} />
+              <MemberEditor projectId={id} currentUserId={authUser?.id ?? ""} />
             </div>
           </div>
         )}

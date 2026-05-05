@@ -12,18 +12,19 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models.project import ProjectInvitation, ProjectMember
+from app.models.project import Project, ProjectInvitation, ProjectMember
 from app.models.user import User
 from app.permissions import (
     can_invite_member,
     get_project_member,
     require_project_owner_or_admin,
 )
-from app.schemas.project import InvitationCreate, InvitationResponse
+from app.schemas.project import InvitationCreate, InvitationPreviewResponse, InvitationResponse
 
 INVITATION_EXPIRE_DAYS = 7
 TOKEN_BYTES = 32  # secrets.token_hex(32) produces 64 hex chars
@@ -158,6 +159,40 @@ async def revoke_invitation(
 # ── Router B: token-based accept endpoint ─────────────────────────────────────
 
 invitations_router = APIRouter()
+
+
+
+@invitations_router.get(
+    "/{token}",
+    response_model=InvitationPreviewResponse,
+)
+async def get_invitation_preview(
+    token: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Public endpoint — returns invitation preview by token.
+    Used to display project name / role before the user logs in.
+    """
+    result = await db.execute(
+        select(ProjectInvitation)
+        .where(ProjectInvitation.token == token)
+        .options(selectinload(ProjectInvitation.project))
+    )
+    invitation = result.scalar_one_or_none()
+    if invitation is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found.",
+        )
+    return InvitationPreviewResponse(
+        id=invitation.id,
+        email=invitation.email,
+        role=invitation.role,
+        status=invitation.status,
+        expires_at=invitation.expires_at,
+        project_name=invitation.project.name,
+    )
 
 
 @invitations_router.post(

@@ -37,13 +37,34 @@ class InvitationCreate(BaseModel):
 
 # ── Response schemas ───────────────────────────────────────────────────────────
 
+class MemberUserInfo(BaseModel):
+    id: uuid.UUID
+    name: str
+    email: str
+
+    model_config = {"from_attributes": True}
+
+
 class ProjectMemberResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
+    user: MemberUserInfo
     role: str
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+
+class InvitationPreviewResponse(BaseModel):
+    id: uuid.UUID
+    email: str
+    role: str
+    status: InvitationStatus
+    expires_at: datetime
+    project_name: str
+
+    model_config = {"from_attributes": False}
 
 
 class InvitationResponse(BaseModel):
@@ -66,8 +87,3 @@ class ProjectResponse(BaseModel):
     description: str
     status: ProjectStatus
     created_at: datetime
-    updated_at: datetime
-    tasks: list[TaskResponse] = []
-    members: list[ProjectMemberResponse] = []
-
-    model_config = {"from_attributes": True}
