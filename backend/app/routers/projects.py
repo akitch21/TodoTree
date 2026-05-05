@@ -167,8 +167,12 @@ async def add_member(
     member = ProjectMember(project_id=project_id, **body.model_dump())
     db.add(member)
     await db.commit()
-    await db.refresh(member)
-    return member
+    result = await db.execute(
+        select(ProjectMember)
+        .where(ProjectMember.id == member.id)
+        .options(selectinload(ProjectMember.user))
+    )
+    return result.scalar_one()
 
 
 @router.delete("/{project_id}/members/{member_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -7,6 +7,7 @@ import SignupPage         from "@/pages/SignupPage";
 import DashboardPage      from "@/pages/DashboardPage";
 import ProjectsPage       from "@/pages/ProjectsPage";
 import ProjectDetailPage  from "@/pages/ProjectDetailPage";
+import InvitationAcceptPage from "@/pages/InvitationAcceptPage";
 import PersonalTasksPage  from "@/pages/PersonalTasksPage";
 import TeamSpacePage      from "@/pages/TeamSpacePage";
 import SettingsPage       from "@/pages/SettingsPage";
@@ -17,6 +18,7 @@ export const router = createBrowserRouter([
   { path: "/",       element: <LandingPage /> },
   { path: "/login",  element: <LoginPage /> },
   { path: "/signup", element: <SignupPage /> },
+  { path: "/invitations/:token", element: <InvitationAcceptPage /> },
 
   // App（認証が必要）
   {

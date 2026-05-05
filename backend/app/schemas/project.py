@@ -87,3 +87,8 @@ class ProjectResponse(BaseModel):
     description: str
     status: ProjectStatus
     created_at: datetime
+    updated_at: datetime
+    tasks: list[TaskResponse] = []
+    members: list[ProjectMemberResponse] = []
+
+    model_config = {"from_attributes": True}

@@ -113,6 +113,7 @@ async def test_cannot_invite_existing_member(client: AsyncClient) -> None:
     add_resp = await client.post(
         f"/api/projects/{project_id}/members",
         json={"user_id": member_user["user_id"], "role": "member"},
+        headers=_auth(owner["token"]),
     )
     assert add_resp.status_code == 201
 
@@ -141,6 +142,7 @@ async def test_only_owner_or_admin_can_invite(client: AsyncClient) -> None:
     await client.post(
         f"/api/projects/{project_id}/members",
         json={"user_id": plain["user_id"], "role": "member"},
+        headers=_auth(owner["token"]),
     )
 
     resp = await _invite(client, plain["token"], project_id, "outsider@example.com")
@@ -257,6 +259,7 @@ async def test_list_invitations_requires_owner_or_admin(client: AsyncClient) -> 
     await client.post(
         f"/api/projects/{project_id}/members",
         json={"user_id": plain["user_id"], "role": "member"},
+        headers=_auth(owner["token"]),
     )
     resp = await client.get(
         f"/api/projects/{project_id}/invitations",
@@ -297,6 +300,7 @@ async def test_admin_can_invite(client: AsyncClient) -> None:
     await client.post(
         f"/api/projects/{project_id}/members",
         json={"user_id": admin_user["user_id"], "role": "admin"},
+        headers=_auth(owner["token"]),
     )
 
     resp = await _invite(client, admin_user["token"], project_id, "via_admin@example.com")

@@ -28,7 +28,12 @@ export function projectStats(p: ProjectData): { total: number; done: number } {
 interface ApiMember {
   id: string;
   user_id: string;
-  role: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  role: "owner" | "admin" | "member";
 }
 
 interface ApiTask {
@@ -87,8 +92,8 @@ function toProjectData(p: ApiProject): ProjectData {
     status:      toFrontendStatus(p.status),
     tasks:       (p.tasks ?? []).map(apiTaskToTask),
     members:     (p.members ?? []).map((m) => ({
-      user: { id: m.user_id, name: "", email: "" },
-      role: m.role as "owner" | "member",
+      user: { id: m.user_id, name: m.user.name, email: m.user.email },
+      role: m.role,
     })),
     createdAt:   p.created_at,
   };

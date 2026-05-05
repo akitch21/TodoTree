@@ -35,25 +35,26 @@ async def test_project_crud(client: AsyncClient) -> None:
 
     project_id = created["id"]
 
-    list_response = await client.get("/api/projects/")
+    list_response = await client.get("/api/projects/", headers=headers)
     assert list_response.status_code == 200
     assert [project["id"] for project in list_response.json()] == [project_id]
 
     update_response = await client.patch(
         f"/api/projects/{project_id}",
         json={"name": "Production checklist", "status": "completed"},
+        headers=headers,
     )
     assert update_response.status_code == 200
     updated = update_response.json()
     assert updated["name"] == "Production checklist"
     assert updated["status"] == "completed"
 
-    get_response = await client.get(f"/api/projects/{project_id}")
+    get_response = await client.get(f"/api/projects/{project_id}", headers=headers)
     assert get_response.status_code == 200
     assert get_response.json()["id"] == project_id
 
-    delete_response = await client.delete(f"/api/projects/{project_id}")
+    delete_response = await client.delete(f"/api/projects/{project_id}", headers=headers)
     assert delete_response.status_code == 204
 
-    missing_response = await client.get(f"/api/projects/{project_id}")
+    missing_response = await client.get(f"/api/projects/{project_id}", headers=headers)
     assert missing_response.status_code == 404
