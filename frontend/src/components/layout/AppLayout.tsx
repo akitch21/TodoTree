@@ -16,25 +16,26 @@ import { GlobalSearch } from "@/components/layout/GlobalSearch";
 import { useAuth } from "@/store/AuthContext";
 
 const navItems = [
-  { to: "/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
-  { to: "/projects",  label: "プロジェクト",   icon: FolderOpen },
-  { to: "/tasks",     label: "タスク（個人）",  icon: CheckSquare },
-  { to: "/team",      label: "チームスペース",  icon: Users },
+  { to: "/dashboard", label: "ダッシュボード", shortLabel: "ホーム",       icon: LayoutDashboard },
+  { to: "/projects",  label: "プロジェクト",   shortLabel: "プロジェクト", icon: FolderOpen },
+  { to: "/tasks",     label: "タスク（個人）",  shortLabel: "タスク",       icon: CheckSquare },
+  { to: "/team",      label: "チームスペース",  shortLabel: "チーム",       icon: Users },
 ];
 
 const bottomItems = [
-  { to: "/settings", label: "設定", icon: Settings },
+  { to: "/settings", label: "設定", shortLabel: "設定", icon: Settings },
 ];
+
+const allNavItems = [...navItems, ...bottomItems];
 
 export default function AppLayout() {
   const [sidebarOpen,  setSidebarOpen]  = useState(false);
   const [searchOpen,   setSearchOpen]   = useState(false);
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const handleLogout = () => { logout(); navigate("/login"); };
 
-  // ⌘K / Ctrl+K shortcut
   const openSearch  = useCallback(() => setSearchOpen(true),  []);
   const closeSearch = useCallback(() => setSearchOpen(false), []);
 
@@ -74,6 +75,7 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen bg-background">
+
       {/* ── Desktop Sidebar ── */}
       <aside className="hidden w-60 flex-col border-r bg-card md:flex">
         <div className="flex h-16 items-center border-b px-5">
@@ -82,7 +84,6 @@ export default function AppLayout() {
           </Link>
         </div>
 
-        {/* Search button */}
         <div className="px-3 pt-3 pb-1">
           <button
             onClick={openSearch}
@@ -127,7 +128,7 @@ export default function AppLayout() {
         </div>
       </aside>
 
-      {/* ── Mobile Overlay ── */}
+      {/* ── Mobile drawer overlay ── */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 md:hidden"
@@ -135,27 +136,40 @@ export default function AppLayout() {
         />
       )}
 
-      {/* ── Mobile Sidebar ── */}
+      {/* ── Mobile drawer (profile / logout only) ── */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r bg-card transition-transform duration-200 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-card transition-transform duration-200 md:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-16 items-center justify-between border-b px-5">
-          <Link to="/" className="text-lg font-bold tracking-tight">
-            ToDoTree
-          </Link>
-          <button onClick={() => setSidebarOpen(false)}>
-            <X size={20} className="text-muted-foreground" />
+        <div className="flex h-14 items-center justify-between border-b px-4">
+          <span className="text-base font-bold tracking-tight">ToDoTree</span>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent transition-colors"
+          >
+            <X size={18} />
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <NavList onClickItem={() => setSidebarOpen(false)} />
-        </nav>
+        {/* User info */}
+        {user && (
+          <div className="border-b px-4 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{user.name}</p>
+                <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1" />
 
         <Separator />
-
         <div className="px-3 py-3">
           {bottomItems.map(({ to, label, icon: Icon }) => (
             <NavLink
@@ -184,27 +198,62 @@ export default function AppLayout() {
         </div>
       </aside>
 
-      {/* ── Main ── */}
+      {/* ── Main area ── */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 items-center gap-3 border-b px-4 md:hidden">
-          <button onClick={() => setSidebarOpen(true)}>
-            <Menu size={20} className="text-muted-foreground" />
+
+        {/* Mobile top header */}
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 md:hidden">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="rounded-lg p-2 text-muted-foreground hover:bg-accent transition-colors"
+            aria-label="メニューを開く"
+          >
+            <Menu size={20} />
           </button>
-          <span className="flex-1 text-lg font-bold tracking-tight">ToDoTree</span>
+          <span className="flex-1 text-base font-bold tracking-tight">ToDoTree</span>
           <button
             onClick={openSearch}
-            className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            className="rounded-lg p-2 text-muted-foreground hover:bg-accent transition-colors"
+            aria-label="検索"
           >
-            <Search size={18} />
+            <Search size={20} />
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 md:pb-6">
           <Outlet />
         </main>
       </div>
 
-      {/* ── Global search modal ── */}
+      {/* ── Bottom tab navigation (mobile only) ── */}
+      <nav
+        className="fixed bottom-0 inset-x-0 z-40 border-t bg-card md:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="flex h-16 items-center">
+          {allNavItems.map(({ to, shortLabel, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `flex flex-1 flex-col items-center justify-center gap-0.5 py-1 transition-colors ${
+                  isActive ? "text-primary" : "text-muted-foreground"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                  <span className="text-[10px] font-medium leading-none">{shortLabel}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
+      </nav>
+
+      {/* Global search modal */}
       <GlobalSearch open={searchOpen} onClose={closeSearch} />
     </div>
   );

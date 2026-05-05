@@ -304,7 +304,7 @@ export default function ProjectDetailPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-start gap-3 px-6 pt-6 pb-4 shrink-0">
+      <div className="flex items-start gap-3 px-4 pt-4 pb-3 md:px-6 md:pt-6 md:pb-4 shrink-0">
         <Link to="/projects"
           className="mt-1 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
           <ArrowLeft size={18} />
@@ -325,12 +325,12 @@ export default function ProjectDetailPage() {
       )}
 
       {/* Tab bar */}
-      <div className="flex border-b shrink-0 px-6">
+      <div className="flex border-b shrink-0 overflow-x-auto scrollbar-none px-4 md:px-6">
         {TABS.map((tab) => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             data-testid={"project-tab-" + tab.id}
             className={
-              "px-5 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px " +
+              "shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px " +
               (activeTab === tab.id
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground")
@@ -359,9 +359,9 @@ export default function ProjectDetailPage() {
 
         {/* ── タスク一覧 — 2カラム ─────────────────────── */}
         {activeTab === "tasks" && (
-          <div className="flex h-full">
+          <div className="flex h-full flex-col md:flex-row">
             {/* Left: table */}
-            <div className="flex-1 min-w-0 overflow-y-auto p-6">
+            <div className="flex-1 min-w-0 overflow-y-auto p-4 md:p-6">
               <TaskCrudTable
                 tasks={tasks} onChange={handleTasksChange}
                 onAdd={openAdd}
@@ -371,10 +371,10 @@ export default function ProjectDetailPage() {
             </div>
 
             {/* Divider */}
-            <div className="w-px bg-border shrink-0" />
+            <div className="hidden md:block w-px bg-border shrink-0" />
 
-            {/* Right: detail or form */}
-            <div className="w-[340px] shrink-0 overflow-y-auto p-6">
+            {/* Right: detail/form — bottom sheet on mobile, sidebar on desktop */}
+            <div className="border-t md:border-t-0 md:border-l md:w-[340px] md:shrink-0 overflow-y-auto p-4 md:p-6 max-h-[55vh] md:max-h-none">
               {rightPane.type === "detail" ? (
                 <TaskDetailView
                   task={rightPane.task}
@@ -399,7 +399,7 @@ export default function ProjectDetailPage() {
 
         {/* ── 概要 ─────────────────────────────────────────── */}
         {activeTab === "overview" && id && projectInfo && (
-          <div className="h-full overflow-y-auto p-6">
+          <div className="h-full overflow-y-auto p-4 md:p-6">
             <ProjectOverview
               project={projectInfo}
               tasks={tasks}
@@ -425,7 +425,7 @@ export default function ProjectDetailPage() {
 
         {/* ── メンバー ───────────────────────────────────── */}
         {activeTab === "members" && id && (
-          <div className="h-full overflow-y-auto p-6">
+          <div className="h-full overflow-y-auto p-4 md:p-6">
             <div className="max-w-2xl">
               <MemberEditor projectId={id} currentUserId={authUser?.id ?? ""} />
             </div>
