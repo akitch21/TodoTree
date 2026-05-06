@@ -9,7 +9,6 @@ import TaskDetailView from "@/components/project/TaskDetailView";
 import MemberEditor from "@/components/project/MemberEditor";
 import TaskSidePanel from "@/components/project/TaskSidePanel";
 import { applyFormToTree, updateTaskInTree, flattenTasks, addTaskToTree } from "@/lib/taskTree";
-import { CURRENT_USER } from "@/lib/currentUser";
 import { api } from "@/lib/api";
 import type { Reporter, Task, TaskFormData, TaskStatus } from "@/types";
 
@@ -153,11 +152,11 @@ export default function ProjectDetailPage() {
   const [mobilePanelOpen,  setMobilePanelOpen]  = useState(false);
   const [treePanel,        setTreePanel]        = useState<TreePanel>(TREE_PANEL_CLOSED);
 
-  const reporters = useMemo<Reporter[]>(() => [
-    CURRENT_USER,
-    ...members.map((m) => ({ id: m.user.id, name: m.user.name }))
-              .filter((r) => r.id !== CURRENT_USER.id),
-  ], [members]);
+  // 担当者はプロジェクトメンバーのみ（ハードコードユーザーは含めない）
+  const reporters = useMemo<Reporter[]>(
+    () => members.map((m) => ({ id: m.user.id, name: m.user.name })),
+    [members]
+  );
 
   // ── Task toggle & status change ──────────────────────────
   const toggleTask = useCallback((taskId: string) => {
@@ -258,33 +257,39 @@ export default function ProjectDetailPage() {
     setTreePanel(TREE_PANEL_CLOSED);
   }, [id]);
 
+  // ログインユーザーを reporter のデフォルト値として使用
+  const currentReporter = useMemo(
+    () => authUser ? { id: authUser.id, name: authUser.name } : undefined,
+    [authUser]
+  );
+
   // Derive form initialData for the right panel
   const rightFormData = useMemo((): Partial<TaskFormData> & { createdAt?: string; id?: string } => {
     if (rightPane.type === "add")
-      return { parentId: rightPane.parentId, reporter: CURRENT_USER };
+      return { parentId: rightPane.parentId, reporter: currentReporter };
     if (rightPane.type === "edit") {
       const t = rightPane.task;
       return {
         id: t.id, text: t.text, description: t.description ?? "",
         dueDate: t.dueDate ?? "", parentId: t.parentId,
         extraDependencies: t.extraDependencies ?? [],
-        reporter: t.reporter ?? CURRENT_USER, createdAt: t.createdAt,
+        reporter: t.reporter ?? currentReporter, createdAt: t.createdAt,
       };
     }
     return {};
-  }, [rightPane]);
+  }, [rightPane, currentReporter]);
 
   // Derive form initialData for the tree sliding panel
   const treeFormData = useMemo((): Partial<TaskFormData> & { createdAt?: string; id?: string } => {
-    if (!treePanel.task) return { reporter: CURRENT_USER };
+    if (!treePanel.task) return { reporter: currentReporter };
     const t = treePanel.task;
     return {
       id: t.id, text: t.text, description: t.description ?? "",
       dueDate: t.dueDate ?? "", parentId: t.parentId,
       extraDependencies: t.extraDependencies ?? [],
-      reporter: t.reporter ?? CURRENT_USER, createdAt: t.createdAt,
+      reporter: t.reporter ?? currentReporter, createdAt: t.createdAt,
     };
-  }, [treePanel.task]);
+  }, [treePanel.task, currentReporter]);
 
   // ── Loading / Error ────────────────────────────────────────
   if (pageLoading) {
