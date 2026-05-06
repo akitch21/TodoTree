@@ -10,6 +10,12 @@
 - Database: PostgreSQL
 - Migration: Alembic
 
+## Design Docs
+
+設計書は [docs/README.md](./docs/README.md) から参照できます。
+
+設計変更、API変更、DB変更、デプロイ手順変更を行う場合は、コード変更と同じ PR で docs も更新します。
+
 ## Local Setup
 
 ### Backend
