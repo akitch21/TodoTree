@@ -1,27 +1,26 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
-import { flattenTasks } from "@/lib/taskTree";
 import { useAuth } from "@/store/AuthContext";
-import type { Task, TaskStatus } from "@/types";
 import type { ProjectMember } from "@/components/project/MemberEditor";
 
 // ── ProjectData type (exported for other modules) ──────────────────────────────
 
 export interface ProjectData {
-  id:           string;
-  name:         string;
-  description?: string;
-  status:       "pending" | "in_progress" | "done";
-  tasks:        Task[];
-  members:      ProjectMember[];
-  createdAt:    string;
+  id:            string;
+  name:          string;
+  description?:  string;
+  status:        "pending" | "in_progress" | "done";
+  task_count:    number;
+  done_count:    number;
+  overdue_count: number;
+  members:       ProjectMember[];
+  createdAt:     string;
 }
 
 // ── Helper: task completion stats ─────────────────────────────────────────────
 
 export function projectStats(p: ProjectData): { total: number; done: number } {
-  const flat = flattenTasks(p.tasks);
-  return { total: flat.length, done: flat.filter((t) => t.status === "done").length };
+  return { total: p.task_count, done: p.done_count };
 }
 
 // ── API shape ──────────────────────────────────────────────────────────────────
@@ -37,38 +36,16 @@ interface ApiMember {
   role: "owner" | "admin" | "member";
 }
 
-interface ApiTask {
-  id: string;
-  parent_id: string | null;
-  title: string;
-  description: string;
-  status: TaskStatus;
-  due_date: string | null;
-  created_at: string;
-  children: ApiTask[];
-}
-
-interface ApiProject {
+interface ApiProjectListItem {
   id: string;
   name: string;
   description: string;
   status: string;            // "active" | "completed" | "archived"
-  tasks: ApiTask[];
+  task_count: number;
+  done_count: number;
+  overdue_count: number;
   members: ApiMember[];
   created_at: string;
-}
-
-function apiTaskToTask(t: ApiTask): Task {
-  return {
-    id:          t.id,
-    text:        t.title,
-    description: t.description || undefined,
-    status:      t.status,
-    parentId:    t.parent_id,
-    children:    (t.children ?? []).map(apiTaskToTask),
-    createdAt:   t.created_at,
-    dueDate:     t.due_date ?? undefined,
-  };
 }
 
 // ── Status mapping ─────────────────────────────────────────────────────────────
@@ -85,23 +62,22 @@ function toApiStatus(s: ProjectData["status"]): string {
   return "active";           // "in_progress"
 }
 
-function toProjectData(p: ApiProject): ProjectData {
+function toProjectData(p: ApiProjectListItem): ProjectData {
   return {
-    id:          p.id,
-    name:        p.name,
-    description: p.description,
-    status:      toFrontendStatus(p.status),
-    tasks:       (p.tasks ?? []).map(apiTaskToTask),
-    members:     (p.members ?? []).map((m) => ({
+    id:            p.id,
+    name:          p.name,
+    description:   p.description,
+    status:        toFrontendStatus(p.status),
+    task_count:    p.task_count,
+    done_count:    p.done_count,
+    overdue_count: p.overdue_count,
+    members:       (p.members ?? []).map((m) => ({
       user: { id: m.user_id, name: m.user.name, email: m.user.email },
       role: m.role,
     })),
-    createdAt:   p.created_at,
+    createdAt:     p.created_at,
   };
 }
-
-// Suppress unused import warning for TaskStatus (used in ProjectData via Task)
-export type { TaskStatus };
 
 // ── Hook ───────────────────────────────────────────────────────────────────────
 
@@ -121,7 +97,7 @@ export function useProjects() {
     try {
       setLoading(true);
       setError(null);
-      const { data } = await api.get<ApiProject[]>("/api/projects/");
+      const { data } = await api.get<ApiProjectListItem[]>("/api/projects/");
       setProjects(data.map(toProjectData));
     } catch {
       setError("プロジェクトの取得に失敗しました");
@@ -136,7 +112,7 @@ export function useProjects() {
   }, [fetchProjects, user?.id]);
 
   const addProject = useCallback(async (name: string, description: string) => {
-    await api.post<ApiProject>("/api/projects/", {
+    await api.post<ApiProjectListItem>("/api/projects/", {
       name, description, status: "active",
     });
     await fetchProjects();
@@ -151,7 +127,7 @@ export function useProjects() {
     if (patch.name        !== undefined) apiPatch.name        = patch.name;
     if (patch.description !== undefined) apiPatch.description = patch.description;
 
-    const { data } = await api.patch<ApiProject>(`/api/projects/${id}`, apiPatch);
+    const { data } = await api.patch<ApiProjectListItem>(`/api/projects/${id}`, apiPatch);
     setProjects((prev) => prev.map((p) => p.id === id ? toProjectData(data) : p));
   }, []);
 

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { FolderOpen, ListTodo, Search, X, CheckCircle2, Circle, Clock } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { usePersonalTasks } from "@/hooks/usePersonalTasks";
-import { flattenTasks } from "@/lib/taskTree";
 import type { TaskStatus } from "@/types";
 
 // ── Result types ──────────────────────────────────────────────────────────────
@@ -87,24 +86,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
       }
     }
 
-    // Tasks in projects
-    for (const p of projects) {
-      for (const t of flattenTasks(p.tasks)) {
-        if (
-          t.text.toLowerCase().includes(q) ||
-          t.description?.toLowerCase().includes(q)
-        ) {
-          out.push({
-            id:       "ptask-" + t.id,
-            kind:     "task",
-            title:    t.text,
-            subtitle: p.name,
-            status:   t.status,
-            href:     "/projects/" + p.id,
-          });
-        }
-      }
-    }
+    // Tasks in projects: task details are lazy-loaded per-project detail page;
+    // global search scans project names only (task search available in project detail)
 
     // Personal tasks
     for (const t of personalTasks) {

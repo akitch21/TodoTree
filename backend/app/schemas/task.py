@@ -32,6 +32,7 @@ class TaskUpdate(BaseModel):
 # ── Response schemas ───────────────────────────────────────────────────────────
 
 class TaskResponse(BaseModel):
+    """個別タスク CRUD エンドポイント用（children なし）。"""
     id: uuid.UUID
     project_id: uuid.UUID
     parent_id: uuid.UUID | None
@@ -42,10 +43,29 @@ class TaskResponse(BaseModel):
     due_date: date | None
     created_at: datetime
     updated_at: datetime
-    children: list[TaskResponse] = []
 
     model_config = {"from_attributes": True}
 
 
-# Enable forward reference
-TaskResponse.model_rebuild()
+class TaskTreeNode(BaseModel):
+    """
+    Python ツリービルダーが生成するツリーノード。
+    ORM の children リレーションには依存しない純粋な Pydantic モデル。
+    from_attributes=True だが、children は build_task_tree() が手動で設定する。
+    """
+    id: uuid.UUID
+    project_id: uuid.UUID
+    parent_id: uuid.UUID | None
+    title: str
+    description: str
+    status: TaskStatus
+    assignee_id: uuid.UUID | None
+    due_date: date | None
+    created_at: datetime
+    updated_at: datetime
+    children: list["TaskTreeNode"] = []
+
+    model_config = {"from_attributes": True}
+
+
+TaskTreeNode.model_rebuild()

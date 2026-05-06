@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle, AlertCircle, Calendar, CheckCircle2, Circle,
@@ -10,28 +10,34 @@ import { StatusBadge }           from "@/components/dashboard/StatusBadge";
 import { formatDate }            from "@/lib/formatDate";
 import { useAuth }               from "@/store/AuthContext";
 import { useProjects }           from "@/hooks/useProjects";
-import { flattenTasks, updateTaskInTree } from "@/lib/taskTree";
+import { updateTaskInTree }      from "@/lib/taskTree";
 import { api }                   from "@/lib/api";
 import type { Task, TaskStatus } from "@/types";
 
-// ── Types ─────────────────────────────────────────────────────
-interface FlatTask {
-  id:            string;
-  text:          string;
-  status:        TaskStatus;
-  dueDate?:      string;
-  assigneeId?:   string;
-  assigneeName?: string;
-  projectId:     string;
-  projectName:   string;
+// ── API shape for project detail (tasks included) ──────────────────────────────
+interface ApiTaskNode {
+  id: string;
+  parent_id: string | null;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  due_date: string | null;
+  created_at: string;
+  children: ApiTaskNode[];
 }
 
-interface ProjectSummary {
-  id:     string;
-  name:   string;
-  status: TaskStatus;
-  total:  number;
-  done:   number;
+function apiTaskToTask(t: ApiTaskNode): Task {
+  return {
+    id:          t.id,
+    text:        t.title,
+    description: t.description || undefined,
+    status:      t.status,
+    parentId:    t.parent_id,
+    children:    (t.children ?? []).map(apiTaskToTask),
+    createdAt:   t.created_at,
+    dueDate:     t.due_date ?? undefined,
+    // assignee resolved in project detail page; omit here to avoid stale data
+  };
 }
 
 // ── Page ──────────────────────────────────────────────────────
@@ -46,29 +52,56 @@ export default function DashboardPage() {
 
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [viewMode,          setViewMode]           = useState<ViewMode>("tree");
-  const [localTasks,        setLocalTasks]         = useState<Record<string, Task[]>>({});
-  const [mutationError,     setMutationError]      = useState<string | null>(null);
 
-  // 実効 projectId（state が未設定なら先頭を使う）
+  // Lazy-loaded task cache: { projectId → Task[] }
+  const [taskCache,     setTaskCache]     = useState<Record<string, Task[]>>({});
+  const [taskLoading,   setTaskLoading]   = useState(false);
+  const [localTasks,    setLocalTasks]    = useState<Record<string, Task[]>>({});
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  // Effective project ID
   const activeProjectId = selectedProjectId || projectTabList[0]?.id || "";
 
-  // タスクは API のもの OR ローカルオーバーライドを優先
-  const currentTasks = useMemo(() => {
+  // Fetch task tree for selected project (once per project, cached)
+  const fetchingRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeProjectId) return;
+    if (taskCache[activeProjectId] !== undefined) return;
+    if (fetchingRef.current === activeProjectId) return;
+    fetchingRef.current = activeProjectId;
+    setTaskLoading(true);
+    api.get<{ tasks: ApiTaskNode[] }>(`/api/projects/${activeProjectId}`)
+      .then(({ data }) => {
+        setTaskCache((prev) => ({ ...prev, [activeProjectId]: data.tasks.map(apiTaskToTask) }));
+      })
+      .catch(() => {
+        setTaskCache((prev) => ({ ...prev, [activeProjectId]: [] }));
+      })
+      .finally(() => {
+        setTaskLoading(false);
+        fetchingRef.current = null;
+      });
+  }, [activeProjectId, taskCache]);
+
+  // Effective tasks for the panel: localOverride > cache
+  const currentTasks = useMemo<Task[]>(() => {
     if (localTasks[activeProjectId]) return localTasks[activeProjectId];
-    return apiProjects.find((p) => p.id === activeProjectId)?.tasks ?? [];
-  }, [apiProjects, activeProjectId, localTasks]);
+    return taskCache[activeProjectId] ?? [];
+  }, [activeProjectId, localTasks, taskCache]);
 
   const toggleTask = useCallback((taskId: string) => {
     if (!activeProjectId) return;
     const base = currentTasks;
-    const current = flattenTasks(base).find((t) => t.id === taskId)?.status;
+    const current = base.flatMap(function flatten(t: Task): Task[] {
+      return [t, ...t.children.flatMap(flatten)];
+    }).find((t) => t.id === taskId)?.status;
     if (!current) return;
 
     const newStatus: TaskStatus = current === "done" ? "pending" : "done";
     setMutationError(null);
-    setLocalTasks((prev) => {
-      return { ...prev, [activeProjectId]: updateTaskInTree(base, taskId, { status: newStatus }) };
-    });
+    setLocalTasks((prev) => ({
+      ...prev, [activeProjectId]: updateTaskInTree(base, taskId, { status: newStatus }),
+    }));
     api.patch(`/api/tasks/${taskId}`, { status: newStatus }).catch(() => {
       setLocalTasks((latest) => ({ ...latest, [activeProjectId]: base }));
       setMutationError("ステータス更新に失敗しました。変更を元に戻しました。");
@@ -79,58 +112,36 @@ export default function DashboardPage() {
     if (!activeProjectId) return;
     const base = currentTasks;
     setMutationError(null);
-    setLocalTasks((prev) => {
-      return { ...prev, [activeProjectId]: updateTaskInTree(base, taskId, { status }) };
-    });
+    setLocalTasks((prev) => ({
+      ...prev, [activeProjectId]: updateTaskInTree(base, taskId, { status }),
+    }));
     api.patch(`/api/tasks/${taskId}`, { status }).catch(() => {
       setLocalTasks((latest) => ({ ...latest, [activeProjectId]: base }));
       setMutationError("ステータス更新に失敗しました。変更を元に戻しました。");
     });
   }, [activeProjectId, currentTasks]);
 
-  // Derived cross-project data
-  const { flatTasks, projects } = useMemo(() => {
-    const flat: FlatTask[] = [];
-    const projs: ProjectSummary[] = [];
-    for (const p of apiProjects) {
-      const allTasks = flattenTasks(p.tasks);
-      let done = 0;
-      for (const t of allTasks) {
-        flat.push({
-          id:           t.id,
-          text:         t.text,
-          status:       t.status,
-          dueDate:      t.dueDate,
-          assigneeId:   t.assignee?.id,
-          assigneeName: t.assignee?.name,
-          projectId:    p.id,
-          projectName:  p.name,
-        });
-        if (t.status === "done") done++;
-      }
-      projs.push({ id: p.id, name: p.name, status: p.status, total: allTasks.length, done });
-    }
-    return { flatTasks: flat, projects: projs };
+  // ── Aggregate stats from API counts ───────────────────────────
+  const { totalTasks, totalDone, totalOverdue, projects } = useMemo(() => {
+    let tasks = 0, done = 0, overdue = 0;
+    const projs = apiProjects.map((p) => {
+      tasks   += p.task_count;
+      done    += p.done_count;
+      overdue += p.overdue_count;
+      const pct = p.task_count > 0 ? Math.round((p.done_count / p.task_count) * 100) : 0;
+      return { id: p.id, name: p.name, status: p.status, total: p.task_count, done: p.done_count, pct, overdue: p.overdue_count };
+    });
+    return { totalTasks: tasks, totalDone: done, totalOverdue: overdue, projects: projs };
   }, [apiProjects]);
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const totalActive  = totalTasks - totalDone;
+  const progressPct  = totalTasks > 0 ? Math.round((totalDone / totalTasks) * 100) : 0;
 
-  const overdueAndToday = useMemo(
-    () => flatTasks.filter(
-      (t) => t.status !== "done" && t.dueDate && t.dueDate <= todayStr
-    ).sort((a, b) => (a.dueDate ?? "") < (b.dueDate ?? "") ? -1 : 1),
-    [flatTasks, todayStr]
+  // Projects with overdue tasks (for the overdue section)
+  const overdueProjects = useMemo(
+    () => projects.filter((p) => p.overdue > 0),
+    [projects]
   );
-
-  // Stats
-  const totalActive  = flatTasks.filter((t) => t.status !== "done").length;
-  const totalDone    = flatTasks.filter((t) => t.status === "done").length;
-  const overdueCount = flatTasks.filter(
-    (t) => t.status !== "done" && t.dueDate && t.dueDate < todayStr
-  ).length;
-  const progressPct = flatTasks.length > 0
-    ? Math.round((totalDone / flatTasks.length) * 100)
-    : 0;
 
   // Greeting
   const hour = new Date().getHours();
@@ -172,10 +183,10 @@ export default function DashboardPage() {
             {greeting}、{user?.name ?? "ゲスト"} さん
           </h1>
         </div>
-        {overdueCount > 0 && (
+        {totalOverdue > 0 && (
           <div className="flex w-fit items-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-xs font-medium text-destructive">
             <AlertTriangle size={13} />
-            期限切れタスクが {overdueCount} 件あります
+            期限切れタスクが {totalOverdue} 件あります
           </div>
         )}
       </div>
@@ -201,9 +212,9 @@ export default function DashboardPage() {
         />
         <StatCard
           label="期限切れ"
-          value={overdueCount}
-          icon={<AlertTriangle size={16} className={overdueCount > 0 ? "text-destructive" : "text-muted-foreground"} />}
-          variant={overdueCount > 0 ? "danger" : "default"}
+          value={totalOverdue}
+          icon={<AlertTriangle size={16} className={totalOverdue > 0 ? "text-destructive" : "text-muted-foreground"} />}
+          variant={totalOverdue > 0 ? "danger" : "default"}
         />
         <StatCard
           label="全体進捗"
@@ -219,52 +230,32 @@ export default function DashboardPage() {
         {/* Left col (2/3) */}
         <div className="lg:col-span-2 flex flex-col gap-6">
 
-          {/* 期限切れ・今日期限タスク */}
+          {/* 期限切れタスク（プロジェクト単位） */}
           <Section
-            title="期限切れ・今日期限のタスク"
+            title="期限切れタスクのあるプロジェクト"
             icon={<Calendar size={15} className="text-destructive" />}
-            count={overdueAndToday.length}
-            emptyText="期限切れ・今日期限のタスクはありません"
+            count={overdueProjects.length}
+            emptyText="期限切れタスクはありません"
           >
-            {overdueAndToday.map((t) => {
-              const isOverdue = t.dueDate! < todayStr;
-              return (
-                <div
-                  key={t.id}
-                  className={
-                    "flex flex-col gap-1.5 rounded-lg border px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 " +
-                    (isOverdue
-                      ? "border-destructive/30 bg-destructive/5"
-                      : "border-amber-400/30 bg-amber-400/5")
-                  }
-                >
-                  {/* アイコン + タスク名 */}
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    {isOverdue
-                      ? <AlertTriangle size={14} className="shrink-0 text-destructive" />
-                      : <Clock size={14} className="shrink-0 text-amber-500" />}
-                    <span className="min-w-0 truncate text-sm font-medium">
-                      {t.text}
-                    </span>
-                  </div>
-                  {/* バッジ + 日付（モバイルは下段、デスクトップは右） */}
-                  <div className="flex items-center gap-2 pl-5 sm:pl-0">
-                    <ProjectBadge name={t.projectName} id={t.projectId} />
-                    <span
-                      className={
-                        "shrink-0 text-xs font-medium " +
-                        (isOverdue ? "text-destructive" : "text-amber-600")
-                      }
-                    >
-                      {isOverdue ? "期限切れ" : "今日"} · {formatDate(t.dueDate)}
-                    </span>
-                  </div>
+            {overdueProjects.map((p) => (
+              <Link
+                key={p.id}
+                to={"/projects/" + p.id}
+                className="flex flex-col gap-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 hover:bg-destructive/10 transition-colors"
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <AlertTriangle size={14} className="shrink-0 text-destructive" />
+                  <span className="min-w-0 truncate text-sm font-medium">{p.name}</span>
                 </div>
-              );
-            })}
+                <span className="shrink-0 pl-5 text-xs font-medium text-destructive sm:pl-0">
+                  <Clock size={11} className="inline mr-1" />
+                  期限切れ {p.overdue} 件
+                </span>
+              </Link>
+            ))}
           </Section>
 
-          {/* 担当タスクはダッシュボードでは省略（API に assignee が未実装のため） */}
+          {/* 担当タスク */}
           <Section
             title="担当タスク"
             icon={<UserCheck size={15} className="text-primary" />}
@@ -287,32 +278,29 @@ export default function DashboardPage() {
               <p className="py-4 text-center text-xs text-muted-foreground">
                 プロジェクトがありません
               </p>
-            ) : projects.map((p) => {
-              const pct = p.total > 0 ? Math.round((p.done / p.total) * 100) : 0;
-              return (
-                <Link
-                  key={p.id}
-                  to={"/projects/" + p.id}
-                  className="flex flex-col gap-2 rounded-lg border bg-card px-3 py-2.5 hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium">{p.name}</span>
-                    <StatusBadge status={p.status} />
+            ) : projects.map((p) => (
+              <Link
+                key={p.id}
+                to={"/projects/" + p.id}
+                className="flex flex-col gap-2 rounded-lg border bg-card px-3 py-2.5 hover:bg-accent/50 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-sm font-medium">{p.name}</span>
+                  <StatusBadge status={p.status} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-secondary">
+                    <div
+                      className="h-1.5 rounded-full bg-primary transition-all duration-500"
+                      style={{ width: p.pct + "%" }}
+                    />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 rounded-full bg-secondary">
-                      <div
-                        className="h-1.5 rounded-full bg-primary transition-all duration-500"
-                        style={{ width: pct + "%" }}
-                      />
-                    </div>
-                    <span className="shrink-0 text-[10px] text-muted-foreground w-14 text-right">
-                      {p.done}/{p.total} · {pct}%
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
+                  <span className="shrink-0 text-[10px] text-muted-foreground w-14 text-right">
+                    {p.done}/{p.total} · {p.pct}%
+                  </span>
+                </div>
+              </Link>
+            ))}
           </Section>
         </div>
       </div>
@@ -358,16 +346,23 @@ export default function DashboardPage() {
           </p>
         )}
 
-        {/* Task panel */}
-        <TaskPanel
-          key={activeProjectId}
-          tasks={currentTasks}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          onToggle={toggleTask}
-          onStatusChange={handleStatusChange}
-          projectName={projectTabList.find((p) => p.id === activeProjectId)?.name ?? ""}
-        />
+        {/* Task panel — lazy-loaded */}
+        {taskLoading && !taskCache[activeProjectId] ? (
+          <div className="flex h-40 items-center justify-center gap-2 text-muted-foreground">
+            <Loader2 size={16} className="animate-spin" />
+            <span className="text-sm">タスクを読み込み中...</span>
+          </div>
+        ) : (
+          <TaskPanel
+            key={activeProjectId}
+            tasks={currentTasks}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onToggle={toggleTask}
+            onStatusChange={handleStatusChange}
+            projectName={projectTabList.find((p) => p.id === activeProjectId)?.name ?? ""}
+          />
+        )}
       </div>
     </div>
   );
@@ -400,19 +395,5 @@ function Section({
         <div className="flex flex-col gap-2">{children}</div>
       )}
     </div>
-  );
-}
-
-// ── ProjectBadge ──────────────────────────────────────────────
-function ProjectBadge({ name, id }: { name: string; id: string }) {
-  return (
-    <Link
-      to={"/projects/" + id}
-      onClick={(e) => e.stopPropagation()}
-      className="flex shrink-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-    >
-      <FolderOpen size={9} />
-      {name}
-    </Link>
   );
 }
