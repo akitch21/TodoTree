@@ -7,7 +7,6 @@ import {
 import { StatCard }              from "@/components/dashboard/StatCard";
 import { TaskPanel, type ViewMode } from "@/components/dashboard/TaskPanel";
 import { StatusBadge }           from "@/components/dashboard/StatusBadge";
-import { formatDate }            from "@/lib/formatDate";
 import { useAuth }               from "@/store/AuthContext";
 import { useProjects }           from "@/hooks/useProjects";
 import { updateTaskInTree }      from "@/lib/taskTree";
