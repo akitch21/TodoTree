@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { Calendar, AlignLeft, UserCircle, UserCheck, RotateCcw } from "lucide-react";
 import { useTaskForm } from "@/hooks/useTaskForm";
 import { formatDateTime } from "@/lib/formatDate";
-import { CURRENT_USER } from "@/lib/currentUser";
+import { useAuth } from "@/store/AuthContext";
 import { Field, DependencySection } from "@/components/project/TaskSidePanel";
 import type { Reporter, Task, TaskFormData } from "@/types";
 
@@ -21,6 +21,7 @@ export default function TaskFormPanel({
   const titleRef    = useRef<HTMLInputElement>(null);
   const resetTrigger = mode + (initialData.id ?? "");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const { user: authUser } = useAuth();
 
   const {
     form, setForm, set,
@@ -46,7 +47,8 @@ export default function TaskFormPanel({
       setForm({
         text: "", description: "", dueDate: "",
         parentId: null, extraDependencies: [],
-        reporter: CURRENT_USER, assignee: null,
+        // 連続追加時は前回の起票者を保持（メンバー選択をやり直さなくて済む）
+        reporter: form.reporter, assignee: null,
       });
       titleRef.current?.focus();
     } catch {
@@ -100,22 +102,30 @@ export default function TaskFormPanel({
           />
         </Field>
 
-        {/* 起票者 */}
+        {/* 起票者 — プロジェクトメンバーから選択 */}
         <Field label="起票者" icon={<UserCircle size={13} />} required>
-          <select
-            value={form.reporter.id}
-            onChange={(e) => {
-              const found = reporterOptions.find((r) => r.id === e.target.value);
-              if (found) set("reporter", found);
-            }}
-            className="input-base"
-          >
-            {reporterOptions.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.id === CURRENT_USER.id ? r.name + "（自分）" : r.name}
-              </option>
-            ))}
-          </select>
+          {reporterOptions.length === 0 ? (
+            <p className="rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+              起票者を選択するには、プロジェクトにメンバーを追加してください。
+            </p>
+          ) : (
+            <select
+              value={form.reporter?.id ?? ""}
+              onChange={(e) => {
+                const found = reporterOptions.find((r) => r.id === e.target.value);
+                set("reporter", found ?? null);
+              }}
+              className="input-base"
+              required
+            >
+              {!form.reporter && <option value="">選択してください</option>}
+              {reporterOptions.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {authUser && r.id === authUser.id ? r.name + "（自分）" : r.name}
+                </option>
+              ))}
+            </select>
+          )}
         </Field>
 
         {/* 担当者 */}

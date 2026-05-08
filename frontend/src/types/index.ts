@@ -53,7 +53,8 @@ export interface TaskFormData {
   dueDate:            string;
   parentId:           string | null;
   extraDependencies:  string[];
-  reporter:           Reporter;
+  /** null = 起票者未設定（プロジェクトメンバーがゼロ件のときなど） */
+  reporter:           Reporter | null;
   /** null = 担当者なし */
   assignee:           Reporter | null;
 }

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { X, Plus, Calendar, AlignLeft, Link2, GitBranch, UserCircle, UserCheck } from "lucide-react";
 import { useTaskForm } from "@/hooks/useTaskForm";
 import { formatDateTime } from "@/lib/formatDate";
-import { CURRENT_USER } from "@/lib/currentUser";
+import { useAuth } from "@/store/AuthContext";
 import type { Reporter, Task, TaskFormData } from "@/types";
 
 // ── Props ─────────────────────────────────────────────────────
@@ -29,6 +29,7 @@ export default function TaskSidePanel({
   const firstInputRef = useRef<HTMLInputElement>(null);
   const [issuedAt]    = useState(() => new Date().toISOString());
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const { user: authUser } = useAuth();
 
   const displayIssuedAt =
     mode === "edit" && initialData.createdAt ? initialData.createdAt : issuedAt;
@@ -120,24 +121,32 @@ export default function TaskSidePanel({
               />
             </Field>
 
-            {/* 起票者 */}
+            {/* 起票者 — プロジェクトメンバーから選択 */}
             <Field label="起票者" icon={<UserCircle size={14} />} required>
               <div className="flex flex-col gap-2">
-                <select
-                  value={form.reporter.id}
-                  onChange={(e) => {
-                    const found = reporterOptions.find((r) => r.id === e.target.value);
-                    if (found) set("reporter", found);
-                  }}
-                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-                >
-                  {reporterOptions.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.id === CURRENT_USER.id ? r.name + "（自分）" : r.name}
-                    </option>
-                  ))}
-                </select>
-                {form.reporter.id === CURRENT_USER.id && (
+                {reporterOptions.length === 0 ? (
+                  <p className="rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                    起票者を選択するには、プロジェクトにメンバーを追加してください。
+                  </p>
+                ) : (
+                  <select
+                    value={form.reporter?.id ?? ""}
+                    onChange={(e) => {
+                      const found = reporterOptions.find((r) => r.id === e.target.value);
+                      set("reporter", found ?? null);
+                    }}
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                    required
+                  >
+                    {!form.reporter && <option value="">選択してください</option>}
+                    {reporterOptions.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {authUser && r.id === authUser.id ? r.name + "（自分）" : r.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {authUser && form.reporter?.id === authUser.id && (
                   <p className="text-xs text-muted-foreground">
                     デフォルトは自分です。変更する場合はプロジェクトメンバーから選択してください。
                   </p>

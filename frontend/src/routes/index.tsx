@@ -4,6 +4,7 @@ import ProtectedRoute     from "@/components/layout/ProtectedRoute";
 import LandingPage        from "@/pages/LandingPage";
 import LoginPage          from "@/pages/LoginPage";
 import SignupPage         from "@/pages/SignupPage";
+import DemoPage           from "@/pages/DemoPage";
 import DashboardPage      from "@/pages/DashboardPage";
 import ProjectsPage       from "@/pages/ProjectsPage";
 import ProjectDetailPage  from "@/pages/ProjectDetailPage";
@@ -18,6 +19,7 @@ export const router = createBrowserRouter([
   { path: "/",       element: <LandingPage /> },
   { path: "/login",  element: <LoginPage /> },
   { path: "/signup", element: <SignupPage /> },
+  { path: "/demo",   element: <DemoPage /> },
   { path: "/invitations/:token", element: <InvitationAcceptPage /> },
 
   // App（認証が必要）

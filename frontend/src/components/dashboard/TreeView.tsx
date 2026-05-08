@@ -129,7 +129,9 @@ export function TreeView({ tasks, onToggle, projectName, onSelectTask }: TreeVie
         maxZoom={1.5}
         panOnDrag
         zoomOnPinch
-        zoomOnScroll={false}
+        // マウスホイール: ズーム / Ctrl+ホイール: ページスクロール（reactflowデフォルト）
+        zoomOnScroll
+        panOnScroll={false}
       >
         <Background gap={20} size={1} color="var(--border)" />
         <Controls

@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { flattenTasks, makeEmptyForm } from "@/lib/taskTree";
-import { CURRENT_USER } from "@/lib/currentUser";
 import type { Reporter, Task, TaskFormData } from "@/types";
 
 export interface UseTaskFormOptions {
   allTasks:     Task[];
+  /** プロジェクトに参加しているメンバー（起票者・担当者の選択肢になる） */
   reporters:    Reporter[];
   initialData:  Partial<TaskFormData> & { id?: string; createdAt?: string };
   resetTrigger: unknown;
@@ -48,20 +48,11 @@ export function useTaskForm({
     [flat, initialData.id, form.parentId, form.extraDependencies, depQuery]
   );
 
-  // 起票者: current user always first
-  const reporterOptions = useMemo(
-    (): Reporter[] => [
-      CURRENT_USER,
-      ...reporters.filter((r) => r.id !== CURRENT_USER.id),
-    ],
-    [reporters]
-  );
-
-  // 担当者: same member pool (no deduplication needed)
-  const assigneeOptions = useMemo(
-    (): Reporter[] => reporters,
-    [reporters]
-  );
+  // 起票者・担当者ともプロジェクトメンバーから選択する。
+  // ハードコード CURRENT_USER は注入しない。ログインユーザーが
+  // メンバーに含まれている場合のみ「(自分)」表記が付く（呼び出し側で判定）。
+  const reporterOptions = useMemo((): Reporter[] => reporters, [reporters]);
+  const assigneeOptions = useMemo((): Reporter[] => reporters, [reporters]);
 
   const set = useCallback(
     <K extends keyof TaskFormData>(key: K, val: TaskFormData[K]) =>

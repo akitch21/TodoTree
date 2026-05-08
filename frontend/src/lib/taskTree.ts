@@ -1,4 +1,3 @@
-import { CURRENT_USER } from "@/lib/currentUser";
 import type { Task, TaskFormData } from "@/types";
 
 let _seq = 0;
@@ -13,7 +12,8 @@ export function makeEmptyForm(override?: Partial<TaskFormData>): TaskFormData {
     dueDate:           "",
     parentId:          null,
     extraDependencies: [],
-    reporter:          CURRENT_USER,
+    // 起票者は呼び出し側で override する（authUser がメンバーならそれをデフォルトに）
+    reporter:          null,
     assignee:          null,
     ...override,
   };
@@ -88,7 +88,7 @@ export function applyFormToTree(tasks: Task[], formData: TaskFormData, id?: stri
     text:               formData.text.trim(),
     description:        formData.description.trim() || undefined,
     dueDate:            formData.dueDate || undefined,
-    reporter:           formData.reporter,
+    reporter:           formData.reporter ?? undefined,
     assignee:           formData.assignee ?? undefined,
     extraDependencies:  formData.extraDependencies.length > 0
                           ? formData.extraDependencies
@@ -114,7 +114,7 @@ export function applyFormToTree(tasks: Task[], formData: TaskFormData, id?: stri
     children:          [],
     createdAt:         new Date().toISOString(),
     dueDate:           formData.dueDate || undefined,
-    reporter:          formData.reporter,
+    reporter:          formData.reporter ?? undefined,
     assignee:          formData.assignee ?? undefined,
     extraDependencies: formData.extraDependencies.length > 0
                          ? formData.extraDependencies

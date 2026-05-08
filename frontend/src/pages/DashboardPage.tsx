@@ -7,6 +7,7 @@ import {
 import { StatCard }              from "@/components/dashboard/StatCard";
 import { TaskPanel, type ViewMode } from "@/components/dashboard/TaskPanel";
 import { StatusBadge }           from "@/components/dashboard/StatusBadge";
+import { AnnouncementsCard }     from "@/components/dashboard/AnnouncementsCard";
 import { useAuth }               from "@/store/AuthContext";
 import { useProjects }           from "@/hooks/useProjects";
 import { updateTaskInTree }      from "@/lib/taskTree";
@@ -267,6 +268,9 @@ export default function DashboardPage() {
 
         {/* Right col (1/3) */}
         <div className="flex flex-col gap-6">
+
+          {/* お知らせ（最大5件） */}
+          <AnnouncementsCard />
 
           {/* プロジェクト進捗 */}
           <Section

@@ -1,26 +1,31 @@
 import { useState } from "react";
+import { GitBranch } from "lucide-react";
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 z-50 w-full border-b bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-950/80">
+    <header className="fixed top-0 left-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        
+
         {/* Logo */}
-        <a href="/" className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
-          ToDoTree
+        <a href="/" className="flex items-center gap-1.5 text-lg font-bold tracking-tight text-foreground">
+          <GitBranch size={18} className="text-primary" />
+          <span>ToDoTree</span>
         </a>
 
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-8 text-sm md:flex">
-          <a href="#features" className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+          <a href="#preview" className="text-muted-foreground transition-colors hover:text-foreground">
+            プレビュー
+          </a>
+          <a href="#features" className="text-muted-foreground transition-colors hover:text-foreground">
             特徴
           </a>
-          <a href="#structure" className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+          <a href="#structure" className="text-muted-foreground transition-colors hover:text-foreground">
             仕組み
           </a>
-          <a href="#team" className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+          <a href="#team" className="text-muted-foreground transition-colors hover:text-foreground">
             チーム活用
           </a>
         </nav>
@@ -29,14 +34,14 @@ export default function Header() {
         <div className="hidden items-center gap-4 md:flex">
           <a
             href="/login"
-            className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             ログイン
           </a>
 
           <a
-            href="#cta"
-            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+            href="/signup"
+            className="lp-cta-glow rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
           >
             無料で始める
           </a>
@@ -44,8 +49,9 @@ export default function Header() {
 
         {/* Mobile Button */}
         <button
-          className="md:hidden text-gray-700 dark:text-gray-200"
+          className="md:hidden text-foreground"
           onClick={() => setIsOpen(!isOpen)}
+          aria-label="メニュー"
         >
           ☰
         </button>
@@ -53,22 +59,15 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="space-y-4 border-t bg-white px-6 pb-4 dark:border-gray-800 dark:bg-gray-950 md:hidden">
-          <a href="#features" className="block text-gray-700 dark:text-gray-300">
-            特徴
-          </a>
-          <a href="#structure" className="block text-gray-700 dark:text-gray-300">
-            仕組み
-          </a>
-          <a href="#team" className="block text-gray-700 dark:text-gray-300">
-            チーム活用
-          </a>
-          <a href="/login" className="block text-gray-700 dark:text-gray-300">
-            ログイン
-          </a>
+        <div className="space-y-4 border-t bg-background px-6 pb-4 md:hidden">
+          <a href="#preview"   className="block text-foreground/80">プレビュー</a>
+          <a href="#features"  className="block text-foreground/80">特徴</a>
+          <a href="#structure" className="block text-foreground/80">仕組み</a>
+          <a href="#team"      className="block text-foreground/80">チーム活用</a>
+          <a href="/login"     className="block text-foreground/80">ログイン</a>
           <a
-            href="#cta"
-            className="block rounded-lg bg-gray-900 py-2 text-center text-white dark:bg-white dark:text-gray-900"
+            href="/signup"
+            className="block rounded-lg bg-primary py-2 text-center font-semibold text-primary-foreground"
           >
             無料で始める
           </a>

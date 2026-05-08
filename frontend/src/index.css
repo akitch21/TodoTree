@@ -154,6 +154,177 @@
 }
 
 /* ═══════════════════════════════════════════════════════
+   LANDING PAGE ANIMATIONS — controlled & professional
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes lp-fade-up {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lp-fade-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes lp-float-soft {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+@keyframes lp-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 35%, transparent); }
+  70%  { box-shadow: 0 0 0 14px color-mix(in oklch, var(--primary) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 0%, transparent); }
+}
+
+@keyframes lp-shine {
+  0%   { background-position: -120% 0; }
+  100% { background-position: 220% 0; }
+}
+
+@keyframes lp-grid-drift {
+  0%   { background-position: 0 0; }
+  100% { background-position: 40px 40px; }
+}
+
+@keyframes lp-progress-fill {
+  0%   { width: 0%; }
+  100% { width: var(--lp-progress, 70%); }
+}
+
+@keyframes lp-cursor-path {
+  0%   { transform: translate(0, 0); }
+  20%  { transform: translate(70px, 18px); }
+  40%  { transform: translate(150px, 60px); }
+  55%  { transform: translate(150px, 60px) scale(0.85); }
+  70%  { transform: translate(225px, 78px); }
+  100% { transform: translate(225px, 78px); }
+}
+
+@keyframes lp-card-slide {
+  0%   { transform: translateX(0) rotate(0); opacity: 1; }
+  35%  { transform: translateX(120px) rotate(2deg); opacity: 1; }
+  60%  { transform: translateX(240px) rotate(0); opacity: 0.8; }
+  100% { transform: translateX(240px) rotate(0); opacity: 1; }
+}
+
+@keyframes lp-check-pop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes lp-typing {
+  0%   { width: 0; }
+  100% { width: 100%; }
+}
+
+@keyframes lp-blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes lp-bg-shift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(20px, -10px, 0) scale(1.05); }
+}
+
+.lp-fade-up         { animation: lp-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.lp-fade-in         { animation: lp-fade-in 0.8s ease-out both; }
+.lp-float-soft      { animation: lp-float-soft 5.5s ease-in-out infinite; }
+.lp-pulse-ring      { animation: lp-pulse-ring 2.4s ease-out infinite; }
+.lp-grid-drift      { animation: lp-grid-drift 18s linear infinite; }
+.lp-bg-shift        { animation: lp-bg-shift 14s ease-in-out infinite; }
+
+.lp-delay-100 { animation-delay: 0.1s; }
+.lp-delay-200 { animation-delay: 0.2s; }
+.lp-delay-300 { animation-delay: 0.3s; }
+.lp-delay-400 { animation-delay: 0.4s; }
+.lp-delay-500 { animation-delay: 0.5s; }
+.lp-delay-700 { animation-delay: 0.7s; }
+
+.lp-shine {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklch, var(--primary) 35%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  animation: lp-shine 2.6s ease-in-out infinite;
+}
+
+.lp-progress-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--primary), color-mix(in oklch, var(--primary) 60%, white));
+  animation: lp-progress-fill 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Hover lift utility for landing cards */
+.lp-card-hover {
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 360ms cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 360ms ease;
+}
+.lp-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 38px -16px color-mix(in oklch, var(--primary) 35%, transparent);
+  border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
+}
+
+/* Accent gradient text */
+.lp-gradient-text {
+  background: linear-gradient(
+    100deg,
+    var(--primary) 0%,
+    color-mix(in oklch, var(--primary) 55%, white) 55%,
+    var(--primary) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lp-shine 5s ease-in-out infinite;
+}
+
+/* Glow ring (used around hero CTA) */
+.lp-cta-glow {
+  position: relative;
+  isolation: isolate;
+}
+.lp-cta-glow::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(120deg, var(--primary), #f59e0b, #3b82f6, var(--primary));
+  background-size: 300% 100%;
+  filter: blur(8px);
+  opacity: 0.55;
+  z-index: -1;
+  animation: lp-shine 4.5s linear infinite;
+}
+
+/* Reduced motion: respect user preference */
+@media (prefers-reduced-motion: reduce) {
+  .lp-fade-up,
+  .lp-fade-in,
+  .lp-float-soft,
+  .lp-pulse-ring,
+  .lp-grid-drift,
+  .lp-bg-shift,
+  .lp-shine,
+  .lp-gradient-text,
+  .lp-cta-glow::before,
+  .lp-progress-bar > span {
+    animation: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
    NATURE THEMES — ToDoTree
    ═══════════════════════════════════════════════════════ */
 
