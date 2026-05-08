@@ -11,7 +11,7 @@ import { AnnouncementsCard }     from "@/components/dashboard/AnnouncementsCard"
 import { flattenTasks, updateTaskInTree } from "@/lib/taskTree";
 import { DEMO_PROJECTS } from "@/lib/demoData";
 import { cn } from "@/lib/utils";
-import type { Project, Task, TaskStatus } from "@/types";
+import type { Project, TaskStatus } from "@/types";
 
 type DemoTab = "dashboard" | "project";
 
