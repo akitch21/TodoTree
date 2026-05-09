@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
+import { TutorialModal } from "@/components/tutorial/TutorialModal";
+import { TutorialProvider } from "@/store/TutorialContext";
 import { useAuth } from "@/store/AuthContext";
 
 const navItems = [
@@ -76,6 +78,7 @@ export default function AppLayout() {
   }, []);
 
   return (
+    <TutorialProvider>
     <div className="flex h-screen bg-background">
 
       {/* ── Desktop Sidebar ── */}
@@ -257,6 +260,10 @@ export default function AppLayout() {
 
       {/* Global search modal */}
       <GlobalSearch open={searchOpen} onClose={closeSearch} />
+
+      {/* Tutorial modal (初回登録時のみ表示) */}
+      <TutorialModal />
     </div>
+    </TutorialProvider>
   );
 }

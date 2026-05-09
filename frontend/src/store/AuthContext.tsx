@@ -20,7 +20,7 @@ interface AuthState {
   logout: () => void;
 }
 
-// ── Context ────────────────────────────────────────────────────────────────────
+// ── Context ──────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthState | null>(null);
 
@@ -70,6 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       "/api/auth/register",
       { name, email, password }
     );
+    // 初回チュートリアルを表示するためのフラグをセット
+    localStorage.setItem("todotree-onboarding", "pending");
     persist(data.access_token, data.user);
   }
 
@@ -89,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ── Hook ───────────────────────────────────────────────────────────────────────
+// ── Hook ───────────────────────────────────────────────────────────────────
 
 export function useAuth(): AuthState {
   const ctx = useContext(AuthContext);
