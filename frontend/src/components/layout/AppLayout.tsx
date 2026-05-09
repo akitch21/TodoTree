@@ -28,29 +28,8 @@ const bottomItems = [
 
 const allNavItems = [...navItems, ...bottomItems];
 
-export default function AppLayout() {
-  const [sidebarOpen,  setSidebarOpen]  = useState(false);
-  const [searchOpen,   setSearchOpen]   = useState(false);
-  const navigate = useNavigate();
-  const { logout, user } = useAuth();
-
-  const handleLogout = () => { logout(); navigate("/login"); };
-
-  const openSearch  = useCallback(() => setSearchOpen(true),  []);
-  const closeSearch = useCallback(() => setSearchOpen(false), []);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setSearchOpen((v) => !v);
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
-
-  const NavList = ({ onClickItem }: { onClickItem?: () => void }) => (
+function NavList({ onClickItem }: { onClickItem?: () => void }) {
+  return (
     <ul className="space-y-0.5">
       {navItems.map(({ to, label, icon: Icon }) => (
         <li key={to}>
@@ -72,6 +51,29 @@ export default function AppLayout() {
       ))}
     </ul>
   );
+}
+
+export default function AppLayout() {
+  const [sidebarOpen,  setSidebarOpen]  = useState(false);
+  const [searchOpen,   setSearchOpen]   = useState(false);
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
+
+  const handleLogout = () => { logout(); navigate("/login"); };
+
+  const openSearch  = useCallback(() => setSearchOpen(true),  []);
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   return (
     <div className="flex h-screen bg-background">

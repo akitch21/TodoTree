@@ -93,5 +93,8 @@ jobs:
             npm install
           fi
 
+      - name: Lint
+        run: npm run lint
+
       - name: Build
         run: npm run build

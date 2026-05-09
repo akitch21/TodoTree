@@ -36,15 +36,15 @@ Base path は `/api` です。認証が必要なAPIは `Authorization: Bearer <t
 
 ## Tasks
 
+すべての Task API はプロジェクトメンバーシップを確認します。非ログインは 401、非メンバーは 404 を返します。
+
 | Method | Path | Auth | Summary |
 | --- | --- | --- | --- |
-| GET | `/api/tasks/project/{project_id}` | No | プロジェクトのルートタスク一覧 |
-| POST | `/api/tasks/project/{project_id}` | No | プロジェクトタスク作成 |
-| GET | `/api/tasks/{task_id}` | No | タスク取得 |
-| PATCH | `/api/tasks/{task_id}` | No | タスク更新 |
-| DELETE | `/api/tasks/{task_id}` | No | タスク削除 |
-
-注意: タスクAPIは現在のコード上、`get_current_user` を要求していません。プロジェクト権限チェックを追加するかは未確定ですが、本番前の検討事項です。
+| GET | `/api/tasks/project/{project_id}` | Yes | プロジェクトのルートタスク一覧（メンバーのみ） |
+| POST | `/api/tasks/project/{project_id}` | Yes | プロジェクトタスク作成（メンバーのみ） |
+| GET | `/api/tasks/{task_id}` | Yes | タスク取得（所属プロジェクトのメンバーのみ） |
+| PATCH | `/api/tasks/{task_id}` | Yes | タスク更新（所属プロジェクトのメンバーのみ） |
+| DELETE | `/api/tasks/{task_id}` | Yes | タスク削除（所属プロジェクトのメンバーのみ） |
 
 ## Personal Tasks
 

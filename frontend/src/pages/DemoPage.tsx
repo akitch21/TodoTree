@@ -49,6 +49,7 @@ export default function DemoPage() {
       const overdue = flat.filter(
         (t) => t.status !== "done" && t.dueDate && t.dueDate < todayStr,
       ).length;
+      // eslint-disable-next-line react-hooks/immutability
       totalTasks   += flat.length;
       totalDone    += done;
       totalOverdue += overdue;

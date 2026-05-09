@@ -330,7 +330,7 @@ function KanbanCardPresentation({
       {!isOverlay && onStatusChange && (prev || next) && (
         <div className="absolute inset-x-0 bottom-0 flex translate-y-full justify-between px-0.5 pb-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none group-hover:pointer-events-auto">
           <button
-            onClick={(e) => { e.stopPropagation(); prev && onStatusChange(task.id, prev); }}
+            onClick={(e) => { e.stopPropagation(); if (prev) onStatusChange(task.id, prev); }}
             disabled={!prev}
             title={prev ? "← " + COLUMNS.find((c) => c.status === prev)?.label : undefined}
             className={cn(
@@ -342,7 +342,7 @@ function KanbanCardPresentation({
             <ChevronLeft size={11} />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); next && onStatusChange(task.id, next); }}
+            onClick={(e) => { e.stopPropagation(); if (next) onStatusChange(task.id, next); }}
             disabled={!next}
             data-testid="kanban-next-status"
             title={next ? "→ " + COLUMNS.find((c) => c.status === next)?.label : undefined}
