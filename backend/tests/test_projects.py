@@ -28,7 +28,8 @@ async def test_project_crud(client: AsyncClient) -> None:
     assert create_response.status_code == 201
     created = create_response.json()
     assert created["name"] == "Launch checklist"
-    assert created["tasks"] == []
+    # tasks フィールドは ProjectListItem には存在しない（task_count で集計）
+    assert created["task_count"] == 0
     # creator is auto-added as owner member
     assert len(created["members"]) == 1
     assert created["members"][0]["role"] == "owner"

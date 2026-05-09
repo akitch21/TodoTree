@@ -2,13 +2,12 @@
 Task API のテスト。
 
 カバレッジ:
-  - 認証なし (401)
+  - 認証なし (403: HTTPBearer は Authorization ヘッダーなしで 403 を返す)
   - プロジェクト非メンバー (404)
   - プロジェクトメンバー (正常系 CRUD)
   - task_id 経由のエンドポイントでも project membership チェックが効いていること
 """
 
-import pytest
 from httpx import AsyncClient
 
 
@@ -48,7 +47,6 @@ async def _create_task(client: AsyncClient, token: str, project_id: str, title: 
 
 # ── 認証なし (401) ─────────────────────────────────────────────────────────────
 
-@pytest.mark.anyio
 async def test_list_tasks_unauthenticated(client: AsyncClient) -> None:
     """未認証ユーザーはタスク一覧を取得できない。"""
     import uuid
@@ -56,7 +54,6 @@ async def test_list_tasks_unauthenticated(client: AsyncClient) -> None:
     assert resp.status_code == 403  # HTTPBearer は Authorizationヘッダーなしで403
 
 
-@pytest.mark.anyio
 async def test_create_task_unauthenticated(client: AsyncClient) -> None:
     """未認証ユーザーはタスクを作成できない。"""
     import uuid
@@ -67,7 +64,6 @@ async def test_create_task_unauthenticated(client: AsyncClient) -> None:
     assert resp.status_code == 403
 
 
-@pytest.mark.anyio
 async def test_get_task_unauthenticated(client: AsyncClient) -> None:
     """未認証ユーザーはタスク詳細を取得できない。"""
     import uuid
@@ -75,7 +71,6 @@ async def test_get_task_unauthenticated(client: AsyncClient) -> None:
     assert resp.status_code == 403
 
 
-@pytest.mark.anyio
 async def test_update_task_unauthenticated(client: AsyncClient) -> None:
     """未認証ユーザーはタスクを更新できない。"""
     import uuid
@@ -86,7 +81,6 @@ async def test_update_task_unauthenticated(client: AsyncClient) -> None:
     assert resp.status_code == 403
 
 
-@pytest.mark.anyio
 async def test_delete_task_unauthenticated(client: AsyncClient) -> None:
     """未認証ユーザーはタスクを削除できない。"""
     import uuid
@@ -96,7 +90,6 @@ async def test_delete_task_unauthenticated(client: AsyncClient) -> None:
 
 # ── プロジェクト非メンバー (404) ───────────────────────────────────────────────
 
-@pytest.mark.anyio
 async def test_list_tasks_non_member(client: AsyncClient) -> None:
     """プロジェクト非メンバーはタスク一覧を取得できない。"""
     owner_token = await _register_and_token(client, "list-owner@example.com", "Owner")
@@ -110,7 +103,6 @@ async def test_list_tasks_non_member(client: AsyncClient) -> None:
     assert resp.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_create_task_non_member(client: AsyncClient) -> None:
     """プロジェクト非メンバーはタスクを作成できない。"""
     owner_token = await _register_and_token(client, "create-owner@example.com", "Owner")
@@ -125,7 +117,6 @@ async def test_create_task_non_member(client: AsyncClient) -> None:
     assert resp.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_get_task_non_member(client: AsyncClient) -> None:
     """プロジェクト非メンバーはタスク詳細を取得できない (task_id 経由)。"""
     owner_token = await _register_and_token(client, "get-owner@example.com", "Owner")
@@ -140,7 +131,6 @@ async def test_get_task_non_member(client: AsyncClient) -> None:
     assert resp.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_update_task_non_member(client: AsyncClient) -> None:
     """プロジェクト非メンバーはタスクを更新できない (task_id 経由)。"""
     owner_token = await _register_and_token(client, "update-owner@example.com", "Owner")
@@ -156,7 +146,6 @@ async def test_update_task_non_member(client: AsyncClient) -> None:
     assert resp.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_delete_task_non_member(client: AsyncClient) -> None:
     """プロジェクト非メンバーはタスクを削除できない (task_id 経由)。"""
     owner_token = await _register_and_token(client, "delete-owner@example.com", "Owner")
@@ -173,7 +162,6 @@ async def test_delete_task_non_member(client: AsyncClient) -> None:
 
 # ── プロジェクトメンバー (正常系) ──────────────────────────────────────────────
 
-@pytest.mark.anyio
 async def test_member_can_crud_tasks(client: AsyncClient) -> None:
     """プロジェクトメンバーはタスクの CRUD が全て行える。"""
     token = await _register_and_token(client, "member-crud@example.com", "Member")
@@ -222,7 +210,6 @@ async def test_member_can_crud_tasks(client: AsyncClient) -> None:
 
 # ── 既存テスト (認証ヘッダー付きに修正) ────────────────────────────────────────
 
-@pytest.mark.anyio
 async def test_update_task_status_returns_updated_task(client: AsyncClient) -> None:
     """タスクのステータス更新が正しい値を返すこと（認証ヘッダー付き）。"""
     token = await _register_and_token(client, "task-owner@example.com", "Task Owner")
