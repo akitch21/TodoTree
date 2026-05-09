@@ -2,7 +2,7 @@
 Task API のテスト。
 
 カバレッジ:
-  - 認証なし (403: HTTPBearer は Authorization ヘッダーなしで 403 を返す)
+  - 認証なし (401: HTTPBearer は Authorization ヘッダーなしで 401 を返す)
   - プロジェクト非メンバー (404)
   - プロジェクトメンバー (正常系 CRUD)
   - task_id 経由のエンドポイントでも project membership チェックが効いていること
@@ -51,7 +51,7 @@ async def test_list_tasks_unauthenticated(client: AsyncClient) -> None:
     """未認証ユーザーはタスク一覧を取得できない。"""
     import uuid
     resp = await client.get(f"/api/tasks/project/{uuid.uuid4()}")
-    assert resp.status_code == 403  # HTTPBearer は Authorizationヘッダーなしで403
+    assert resp.status_code == 401  # HTTPBearer は Authorizationヘッダーなしで401
 
 
 async def test_create_task_unauthenticated(client: AsyncClient) -> None:
@@ -61,14 +61,14 @@ async def test_create_task_unauthenticated(client: AsyncClient) -> None:
         f"/api/tasks/project/{uuid.uuid4()}",
         json={"title": "Intruder task", "description": "", "status": "pending"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 async def test_get_task_unauthenticated(client: AsyncClient) -> None:
     """未認証ユーザーはタスク詳細を取得できない。"""
     import uuid
     resp = await client.get(f"/api/tasks/{uuid.uuid4()}")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 async def test_update_task_unauthenticated(client: AsyncClient) -> None:
@@ -78,14 +78,14 @@ async def test_update_task_unauthenticated(client: AsyncClient) -> None:
         f"/api/tasks/{uuid.uuid4()}",
         json={"status": "done"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 async def test_delete_task_unauthenticated(client: AsyncClient) -> None:
     """未認証ユーザーはタスクを削除できない。"""
     import uuid
     resp = await client.delete(f"/api/tasks/{uuid.uuid4()}")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 # ── プロジェクト非メンバー (404) ───────────────────────────────────────────────
